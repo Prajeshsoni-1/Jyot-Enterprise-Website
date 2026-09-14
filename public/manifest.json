@@ -1,0 +1,19 @@
+{
+  "name": "Jyot Enterprise — Financial, IT, Legal & Engineering Services",
+  "short_name": "Jyot Enterprise",
+  "description": "One accountable partner for financial, IT, legal and engineering services across India.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#F04A23",
+  "lang": "en-IN",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}
