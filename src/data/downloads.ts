@@ -41,7 +41,7 @@ const build = (
       division,
       slug,
       title: i.title || `${label} ${i.kind}`,
-      fileUrl: i.fileUrl || `/api/downloads/${filename}`,
+      fileUrl: i.fileUrl || `/downloads/${filename}`,
       downloadName: filename,
     };
   });
@@ -53,7 +53,7 @@ export const DOWNLOADS: DownloadItem[] = [
       title: "Jyot Financial Services — Capability Brochure",
       summary: "Every funding and risk product we run, with typical ticket sizes and turnaround.",
       pages: 8,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Financial-Services-Capability-Brochure.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Financial-Services-Capability-Brochure.pdf",
       downloadName: "Jyot-Enterprise-Financial-Services-Capability-Brochure.pdf",
       sections: [
         {
@@ -83,7 +83,7 @@ export const DOWNLOADS: DownloadItem[] = [
       title: "Loan Document Checklist",
       summary: "Everything a lender will ask for, by loan type and applicant profile.",
       pages: 4,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Loan-Document-Checklist.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Loan-Document-Checklist.pdf",
       downloadName: "Jyot-Enterprise-Loan-Document-Checklist.pdf",
       sections: [
         {
@@ -115,7 +115,7 @@ export const DOWNLOADS: DownloadItem[] = [
       title: "From Enquiry to Disbursement",
       summary: "The nine steps of a loan file and what can slow each one down.",
       pages: 6,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Loan-Enquiry-to-Disbursement-Guide.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Loan-Enquiry-to-Disbursement-Guide.pdf",
       downloadName: "Jyot-Enterprise-Loan-Enquiry-to-Disbursement-Guide.pdf",
       sections: [
         {
@@ -143,7 +143,7 @@ export const DOWNLOADS: DownloadItem[] = [
       title: "Financial Services — FAQs",
       summary: "The twenty questions our credit desk answers every week.",
       pages: 5,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Financial-Services-FAQs.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Financial-Services-FAQs.pdf",
       downloadName: "Jyot-Enterprise-Financial-Services-FAQs.pdf",
       sections: [
         {
@@ -172,7 +172,7 @@ export const DOWNLOADS: DownloadItem[] = [
       summary:
         "Technology solutions designed around the way your business works. Custom software, ERP, CRM, AI automation, and cloud & API integration.",
       pages: 7,
-      fileUrl: "/api/downloads/Jyot-Enterprise-IT-Services-Capability-Brochure.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-IT-Services-Capability-Brochure.pdf",
       downloadName: "Jyot-Enterprise-IT-Services-Capability-Brochure.pdf",
       sections: [
         {
@@ -201,7 +201,7 @@ export const DOWNLOADS: DownloadItem[] = [
       summary:
         "A practical checklist to help businesses organize requirements, users, workflows, data, integrations and deployment expectations before starting development.",
       pages: 4,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Software-Project-Readiness-Checklist.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Software-Project-Readiness-Checklist.pdf",
       downloadName: "Jyot-Enterprise-Software-Project-Readiness-Checklist.pdf",
       sections: [
         {
@@ -231,7 +231,7 @@ export const DOWNLOADS: DownloadItem[] = [
       summary:
         "From business idea to production-ready software. Clear process, practical technology, and measurable 8-stage delivery.",
       pages: 4,
-      fileUrl: "/api/downloads/Jyot-Enterprise-How-We-Ship-Software.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-How-We-Ship-Software.pdf",
       downloadName: "Jyot-Enterprise-How-We-Ship-Software.pdf",
       sections: [
         {
@@ -261,7 +261,7 @@ export const DOWNLOADS: DownloadItem[] = [
       summary:
         "14 transparent answers to common questions about custom software, ERP, CRM, AI automation, APIs, mobile responsiveness, data migration and security.",
       pages: 4,
-      fileUrl: "/api/downloads/Jyot-Enterprise-IT-Services-FAQs.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-IT-Services-FAQs.pdf",
       downloadName: "Jyot-Enterprise-IT-Services-FAQs.pdf",
       sections: [
         {
@@ -287,7 +287,7 @@ export const DOWNLOADS: DownloadItem[] = [
       title: "Jyot Legal & Compliance — Capability Brochure",
       summary: "Registrations, filings, IP and contracts handled as a standing desk.",
       pages: 8,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Legal-Compliance-Capability-Brochure.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Legal-Compliance-Capability-Brochure.pdf",
       downloadName: "Jyot-Enterprise-Legal-Compliance-Capability-Brochure.pdf",
       sections: [
         {
@@ -306,7 +306,7 @@ export const DOWNLOADS: DownloadItem[] = [
       title: "Annual Compliance Checklist",
       summary: "Every recurring obligation by entity type, with due dates.",
       pages: 4,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Annual-Compliance-Checklist.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Annual-Compliance-Checklist.pdf",
       downloadName: "Jyot-Enterprise-Annual-Compliance-Checklist.pdf",
       sections: [
         {
@@ -324,7 +324,7 @@ export const DOWNLOADS: DownloadItem[] = [
       title: "Registration to Steady State",
       summary: "What happens in your first ninety days as a registered entity.",
       pages: 5,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Company-Registration-to-Steady-State-Guide.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Company-Registration-to-Steady-State-Guide.pdf",
       downloadName: "Jyot-Enterprise-Company-Registration-to-Steady-State-Guide.pdf",
       sections: [
         {
@@ -344,7 +344,7 @@ export const DOWNLOADS: DownloadItem[] = [
       title: "Legal & Compliance — FAQs",
       summary: "Penalties, notices, structure changes and IP timelines.",
       pages: 4,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Legal-Compliance-FAQs.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Legal-Compliance-FAQs.pdf",
       downloadName: "Jyot-Enterprise-Legal-Compliance-FAQs.pdf",
       sections: [
         {
@@ -364,7 +364,7 @@ export const DOWNLOADS: DownloadItem[] = [
       title: "Jyot Engineering — Capability Brochure",
       summary: "Design, automation, machine building and manufacturing support.",
       pages: 9,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Engineering-Services-Capability-Brochure.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Engineering-Services-Capability-Brochure.pdf",
       downloadName: "Jyot-Enterprise-Engineering-Services-Capability-Brochure.pdf",
       sections: [
         {
@@ -383,7 +383,7 @@ export const DOWNLOADS: DownloadItem[] = [
       title: "Engineering Enquiry Checklist",
       summary: "The inputs we need to quote a design or automation mandate accurately.",
       pages: 3,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Engineering-Enquiry-Checklist.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Engineering-Enquiry-Checklist.pdf",
       downloadName: "Jyot-Enterprise-Engineering-Enquiry-Checklist.pdf",
       sections: [
         {
@@ -403,7 +403,7 @@ export const DOWNLOADS: DownloadItem[] = [
       title: "Concept to Commissioning",
       summary: "How an engineering mandate moves from brief to signed-off machine.",
       pages: 6,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Concept-to-Commissioning-Guide.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Concept-to-Commissioning-Guide.pdf",
       downloadName: "Jyot-Enterprise-Concept-to-Commissioning-Guide.pdf",
       sections: [
         {
@@ -424,7 +424,7 @@ export const DOWNLOADS: DownloadItem[] = [
       title: "Engineering — FAQs",
       summary: "IP on drawings, warranty, spares, AMC and site support.",
       pages: 4,
-      fileUrl: "/api/downloads/Jyot-Enterprise-Engineering-FAQs.pdf",
+      fileUrl: "/downloads/Jyot-Enterprise-Engineering-FAQs.pdf",
       downloadName: "Jyot-Enterprise-Engineering-FAQs.pdf",
       sections: [
         {

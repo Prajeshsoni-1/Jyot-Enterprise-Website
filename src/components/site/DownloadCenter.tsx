@@ -18,7 +18,9 @@ export function DownloadCenter({ division, title }: { division?: ServiceKey; tit
       {items.map((item) => {
         const isDone = done.includes(item.slug);
         const filename = item.downloadName || `${item.slug}.pdf`;
-        const fileUrl = item.fileUrl || `/api/downloads/${filename}`;
+        const fileUrl = item.fileUrl
+          ? item.fileUrl.replace(/^\/api\/downloads\//, "/downloads/")
+          : `/downloads/${filename}`;
 
         return (
           <div
@@ -39,6 +41,8 @@ export function DownloadCenter({ division, title }: { division?: ServiceKey; tit
             <a
               href={fileUrl}
               download={filename}
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={() => {
                 setDone((prev) => (prev.includes(item.slug) ? prev : [...prev, item.slug]));
                 trackEvent("file_download", {
