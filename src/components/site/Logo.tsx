@@ -84,7 +84,7 @@ export function Logo({
       <img
         src={invert ? "/brand/logo-dark-mode.png" : "/brand/logo-cropped.png"}
         alt={alt}
-        className="h-8 sm:h-9.5 md:h-10.5 w-auto max-w-[130px] sm:max-w-[175px] md:max-w-[210px] object-contain"
+        className="h-10 sm:h-12 md:h-[52px] lg:h-[56px] w-auto max-w-[170px] sm:max-w-[210px] md:max-w-[240px] lg:max-w-[260px] object-contain transition-transform duration-200"
         loading="eager"
         decoding="async"
       />
