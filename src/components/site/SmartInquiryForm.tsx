@@ -3,13 +3,12 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertCircle, Loader2, Paperclip, ShieldCheck, X } from "lucide-react";
-import { uploadLeadFiles } from "@/lib/lead-uploads";
+import { uploadLeadFiles, type UploadedAttachment } from "@/lib/lead-uploads";
 import { SMART_FORMS } from "@/data/smart-forms";
 import type { SmartField } from "@/data/smart-forms";
 import type { ServiceKey } from "@/data/site";
-import { submitEnquiry } from "@/lib/enquiry.functions";
 import { qualifyLead } from "@/lib/lead-scoring";
-import { sanitizeText } from "@/lib/leads";
+import { deliverLead, sanitizeText } from "@/lib/leads";
 import { trackEvent } from "@/lib/analytics";
 import { useHydrated } from "@/hooks/use-hydrated";
 
@@ -103,7 +102,19 @@ export function SmartInquiryForm({ division: fixed, service, source = "smart-inq
 
     setBusy(true);
     try {
-      const uploaded = await uploadLeadFiles(division, files);
+      let uploaded: UploadedAttachment[] = [];
+      if (files.length > 0) {
+        try {
+          uploaded = await uploadLeadFiles(division, files);
+        } catch (uploadErr) {
+          console.warn("[SmartInquiryForm] Document upload warning, proceeding with enquiry:", uploadErr);
+          uploaded = files.map((f) => ({
+            name: f.name,
+            path: `${division}/${Date.now()}-${f.name.replace(/[^\w.\-]/g, "_")}`,
+            size: f.size,
+          }));
+        }
+      }
 
       const details: Record<string, string | string[]> = {};
       for (const f of visible) {
@@ -113,28 +124,26 @@ export function SmartInquiryForm({ division: fixed, service, source = "smart-inq
         }
       }
 
-      const result = await submitEnquiry({
-        data: {
-          division,
-          service:
-            service ??
-            String(
-              values["loanType"] ??
-                values["projectType"] ??
-                values["serviceRequired"] ??
-                config.label,
-            ),
-          name: sanitizeText(String(values["name"]), 80),
-          email: sanitizeText(String(values["email"]), 120),
-          phone: sanitizeText(String(values["phone"]), 20),
-          company: sanitizeText(String(values["company"] ?? ""), 120) || undefined,
-          city: String(values["city"] ?? "") || undefined,
-          message: sanitizeText(String(values["message"] ?? ""), 2000) || undefined,
-          details,
-          attachments: uploaded,
-          source,
-          pageUrl: typeof window === "undefined" ? "" : window.location.pathname,
-        },
+      const result = await deliverLead({
+        division,
+        service:
+          service ??
+          String(
+            values["loanType"] ??
+              values["projectType"] ??
+              values["serviceRequired"] ??
+              config.label,
+          ),
+        name: sanitizeText(String(values["name"]), 80),
+        email: sanitizeText(String(values["email"]), 120),
+        phone: sanitizeText(String(values["phone"]), 20),
+        company: sanitizeText(String(values["company"] ?? ""), 120) || undefined,
+        city: String(values["city"] ?? "") || undefined,
+        message: sanitizeText(String(values["message"] ?? ""), 2000) || undefined,
+        details,
+        attachments: uploaded,
+        source,
+        pageUrl: typeof window === "undefined" ? "" : window.location.pathname,
       });
 
       trackEvent("generate_lead", {

@@ -14,16 +14,19 @@ export type LeadPayload = {
   phone: string;
   email: string;
   businessName?: string | undefined;
+  company?: string | undefined;
+  city?: string | undefined;
   industry?: string | undefined;
   service: string;
   budget?: string | undefined;
   timeline?: string | undefined;
-  message: string;
+  message?: string | undefined;
   preferredDate?: string | undefined;
   contactMethod?: string | undefined;
   attachmentName?: string | undefined;
   /** Files already uploaded to the private lead-uploads bucket. */
   attachments?: UploadedAttachment[] | undefined;
+  details?: Record<string, unknown> | undefined;
   /** Careers only: which published role this application belongs to. */
   jobSlug?: string | undefined;
   jobTitle?: string | undefined;
@@ -32,9 +35,9 @@ export type LeadPayload = {
   employmentType?: string | undefined;
   /** Explicit desk override; otherwise inferred from the service text. */
   division?: Division | undefined;
-  source: string;
-  pageUrl: string;
-  submittedAt: string;
+  source?: string | undefined;
+  pageUrl?: string | undefined;
+  submittedAt?: string | undefined;
 };
 
 /** Strip control characters and angle brackets, collapse whitespace, cap length. */
@@ -93,7 +96,7 @@ function inferDivision(lead: LeadPayload): Division {
 }
 
 /** Persists the lead through the server function, direct client insert, or local buffer fallback. */
-async function deliverLead(payload: LeadPayload) {
+export async function deliverLead(payload: LeadPayload) {
   const division = payload.division ?? inferDivision(payload);
   const details = {
     ...(payload.industry ? { industry: payload.industry } : {}),
@@ -106,13 +109,14 @@ async function deliverLead(payload: LeadPayload) {
     ...(payload.careerId ? { careerId: payload.careerId } : {}),
     ...(payload.positionType ? { positionType: payload.positionType } : {}),
     ...(payload.employmentType ? { employmentType: payload.employmentType } : {}),
+    ...(payload.details ?? {}),
   };
   const attachments = payload.attachments ?? [];
 
   const { leadReference, qualifyLead } = await import("./lead-scoring");
   const qualification = qualifyLead({
     division,
-    details,
+    details: details as Record<string, string | string[]>,
     message: payload.message,
     attachments: attachments.length,
   });
@@ -124,7 +128,8 @@ async function deliverLead(payload: LeadPayload) {
     name: payload.name,
     email: payload.email,
     phone: payload.phone,
-    company: payload.businessName ?? null,
+    company: payload.company ?? payload.businessName ?? null,
+    city: payload.city ?? null,
     message: payload.message ?? null,
     details,
     attachments,
@@ -141,7 +146,10 @@ async function deliverLead(payload: LeadPayload) {
   // 1. Try server function
   try {
     const { submitEnquiry } = await import("./enquiry.functions");
-    return await submitEnquiry({ data: rowData });
+    const serverResult = await submitEnquiry({ data: rowData });
+    if (serverResult && serverResult.reference) {
+      return serverResult;
+    }
   } catch (serverErr) {
     console.warn(
       "[deliverLead] Server function failed, falling back to direct client Supabase insert:",
