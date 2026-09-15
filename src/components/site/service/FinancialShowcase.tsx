@@ -241,12 +241,6 @@ function LenderCard({ lender }: { lender: LenderItem }) {
           {lender.name}
         </span>
       )}
-      {lender.is_featured && (
-        <span
-          className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary/60"
-          title="Featured Partner"
-        />
-      )}
     </motion.div>
   );
 }
