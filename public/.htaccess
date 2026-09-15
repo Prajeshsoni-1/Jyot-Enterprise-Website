@@ -1,0 +1,28 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Redirect /api/downloads/ to static /downloads/
+  RewriteRule ^api/downloads/(.+)$ /downloads/$1 [R=301,L]
+
+  # 2. Serve existing files or directories directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 3. Rewrite all other SPA paths to index.html
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Ensure correct MIME type and headers for PDFs
+<IfModule mod_mime.c>
+  AddType application/pdf .pdf
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(pdf)$">
+    Header set Content-Type "application/pdf"
+    Header set X-Content-Type-Options "nosniff"
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+</IfModule>
