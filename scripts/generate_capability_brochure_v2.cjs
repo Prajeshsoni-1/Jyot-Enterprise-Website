@@ -291,7 +291,7 @@ async function buildBrochure() {
       { name: "Cloud & Integrations", desc: "PostgreSQL, Supabase, REST APIs & cloud infrastructure" },
     ];
 
-    let pillY = height - 440;
+    let pillY = height - 435;
     for (const p of pillars) {
       page.drawRectangle({
         x: 70,
@@ -306,7 +306,7 @@ async function buildBrochure() {
       // Orange bullet badge
       page.drawRectangle({
         x: 82,
-        y: pillY + 4,
+        y: pillY + 5,
         width: 6,
         height: 6,
         color: ORANGE,
@@ -314,21 +314,21 @@ async function buildBrochure() {
 
       page.drawText(p.name, {
         x: 96,
-        y: pillY + 3,
-        size: 10,
+        y: pillY + 4,
+        size: 9.5,
         font: fontBold,
         color: DARK,
       });
 
       page.drawText(p.desc, {
-        x: 215,
-        y: pillY + 3,
-        size: 8.5,
+        x: 96,
+        y: pillY - 8,
+        size: 8.0,
         font: fontRegular,
         color: MUTED,
       });
 
-      pillY -= 46;
+      pillY -= 44;
     }
 
     // Bottom Contact Box

@@ -199,9 +199,35 @@ function drawChecklistItem(page, title, desc, x, y, width, fontRegular, fontBold
   return y - 18;
 }
 
-// Helper to draw clean cards
+// Helper to draw clean cards with wrapping for long text
 function drawContentCard(page, title, points, x, y, width, fontRegular, fontBold) {
-  const cardH = 34 + (points.length * 15);
+  const itemMaxWidth = width - 36;
+  const itemLineHeight = 12;
+
+  // Pre-calculate wrapped lines for each point
+  const preparedItems = points.map(pt => {
+    const sanitized = cleanWinAnsi(pt);
+    const words = sanitized.split(' ');
+    const lines = [];
+    let currentLine = '';
+    for (let w = 0; w < words.length; w++) {
+      const test = currentLine + words[w] + ' ';
+      if (fontRegular.widthOfTextAtSize(test, 8.5) > itemMaxWidth && w > 0) {
+        lines.push(currentLine.trim());
+        currentLine = words[w] + ' ';
+      } else {
+        currentLine = test;
+      }
+    }
+    if (currentLine.trim()) {
+      lines.push(currentLine.trim());
+    }
+    return lines;
+  });
+
+  const totalLines = preparedItems.reduce((sum, lines) => sum + lines.length, 0);
+  const cardH = 34 + (totalLines * itemLineHeight) + Math.max(0, (points.length - 1) * 3);
+
   page.drawRectangle({
     x,
     y: y - cardH,
@@ -229,7 +255,8 @@ function drawContentCard(page, title, points, x, y, width, fontRegular, fontBold
   });
 
   let curY = y - 38;
-  for (const pt of points) {
+  for (let i = 0; i < preparedItems.length; i++) {
+    const lines = preparedItems[i];
     page.drawRectangle({
       x: x + 14,
       y: curY + 2,
@@ -237,14 +264,17 @@ function drawContentCard(page, title, points, x, y, width, fontRegular, fontBold
       height: 4,
       color: ORANGE,
     });
-    page.drawText(cleanWinAnsi(pt), {
-      x: x + 24,
-      y: curY,
-      size: 8.5,
-      font: fontRegular,
-      color: DARK,
-    });
-    curY -= 15;
+    for (let l = 0; l < lines.length; l++) {
+      page.drawText(lines[l], {
+        x: x + 24,
+        y: curY,
+        size: 8.5,
+        font: fontRegular,
+        color: DARK,
+      });
+      curY -= itemLineHeight;
+    }
+    curY -= 3;
   }
 
   return y - cardH - 12;
@@ -435,13 +465,13 @@ async function generateDocument(docDef) {
       color: DARK,
     });
 
-    let pillY = height - 440;
+    let pillY = height - 435;
     for (const p of heroPoints.slice(0, 4)) {
       page.drawRectangle({
         x: 70,
-        y: pillY - 14,
+        y: pillY - 18,
         width: width - 118,
-        height: 38,
+        height: 44,
         color: WHITE,
         borderColor: BORDER,
         borderWidth: 1,
@@ -450,7 +480,7 @@ async function generateDocument(docDef) {
       // Orange bullet badge
       page.drawRectangle({
         x: 82,
-        y: pillY + 4,
+        y: pillY + 8,
         width: 6,
         height: 6,
         color: ORANGE,
@@ -458,23 +488,21 @@ async function generateDocument(docDef) {
 
       page.drawText(cleanWinAnsi(p.title), {
         x: 96,
-        y: pillY + 3,
-        size: 9.5,
+        y: pillY + 7,
+        size: 9.2,
         font: fontBold,
         color: DARK,
-        maxWidth: 165,
       });
 
       page.drawText(cleanWinAnsi(p.desc), {
-        x: 235,
-        y: pillY + 3,
-        size: 8.2,
+        x: 96,
+        y: pillY - 8,
+        size: 8.0,
         font: fontRegular,
         color: MUTED,
-        maxWidth: width - 235 - 55,
       });
 
-      pillY -= 46;
+      pillY -= 50;
     }
 
     // Bottom Contact Box (EXACT IMAGE 2: LIGHT_BG, BORDER, NO BLACK BOX!)
@@ -541,14 +569,21 @@ async function generateDocument(docDef) {
     curY -= 28;
 
     if (pageData.heading) {
-      page.drawText(cleanWinAnsi(pageData.heading), {
+      const headingText = cleanWinAnsi(pageData.heading);
+      const maxWidth = width - 96;
+      let headingSize = 17;
+      const headingWidth = fontBold.widthOfTextAtSize(headingText, headingSize);
+      if (headingWidth > maxWidth) {
+        headingSize = Math.max(13, headingSize * (maxWidth / headingWidth) * 0.98);
+      }
+      page.drawText(headingText, {
         x: 48,
         y: curY,
-        size: 18,
+        size: headingSize,
         font: fontBold,
         color: DARK,
       });
-      curY -= 20;
+      curY -= (headingSize + 4);
     }
 
     if (pageData.subheading) {
@@ -568,11 +603,30 @@ async function generateDocument(docDef) {
           curY -= 8;
         } else if (sec.type === 'faqs') {
           for (const f of sec.items) {
+            // Calculate answer lines to make card height dynamic
+            const aText = cleanWinAnsi(`A: ${f.a}`);
+            const words = aText.split(' ');
+            let aLines = 1;
+            let currentLine = '';
+            const maxAnswerWidth = width - 120;
+            for (let wIdx = 0; wIdx < words.length; wIdx++) {
+              const test = currentLine + words[wIdx] + ' ';
+              if (fontRegular.widthOfTextAtSize(test, 8.5) > maxAnswerWidth && wIdx > 0) {
+                aLines++;
+                currentLine = words[wIdx] + ' ';
+              } else {
+                currentLine = test;
+              }
+            }
+
+            const aLineHeight = 11.5;
+            const cardHeight = Math.max(56, 18 + (aLines * aLineHeight) + 14);
+
             page.drawRectangle({
               x: 48,
-              y: curY - 56,
+              y: curY - cardHeight,
               width: width - 96,
-              height: 56,
+              height: cardHeight,
               color: LIGHT_BG,
               borderColor: BORDER,
               borderWidth: 0.8,
@@ -580,14 +634,14 @@ async function generateDocument(docDef) {
             // Left orange accent
             page.drawRectangle({
               x: 48,
-              y: curY - 56,
+              y: curY - cardHeight,
               width: 3.5,
-              height: 56,
+              height: cardHeight,
               color: ORANGE,
             });
-            page.drawText(cleanWinAnsi(`Q: ${f.q}`), { x: 60, y: curY - 18, size: 9.5, font: fontBold, color: DARK });
-            drawTextBlock(page, `A: ${f.a}`, 60, curY - 32, width - 120, fontRegular, 8.5, MUTED, 11.5);
-            curY -= 68;
+            page.drawText(cleanWinAnsi(`Q: ${f.q}`), { x: 60, y: curY - 16, size: 9.5, font: fontBold, color: DARK });
+            drawTextBlock(page, `A: ${f.a}`, 60, curY - 30, width - 120, fontRegular, 8.5, MUTED, aLineHeight);
+            curY -= (cardHeight + 10);
           }
         }
       }
