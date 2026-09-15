@@ -564,7 +564,7 @@ export const SERVICE_THEMES: Record<ServiceKey, ServiceTheme> = {
     label: "Professional Banking",
     pattern: "gold",
     highlights: [
-      { k: "₹380 Cr", v: "Funding facilitated" },
+      { k: "₹150 Cr", v: "Funding facilitated" },
       { k: "15 days", v: "Median sanction time" },
       { k: "86+", v: "Lender relationships" },
       { k: "7.5%", v: "Best secured rate" },

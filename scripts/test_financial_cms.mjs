@@ -39,7 +39,7 @@ async function testDatabase() {
 
   // Assertions
   const stats = showcase?.statistics;
-  if (stats?.funding_facilitated !== "₹380 Cr") throw new Error(`Expected ₹380 Cr, got ${stats?.funding_facilitated}`);
+  if (stats?.funding_facilitated !== "₹150 Cr") throw new Error(`Expected ₹150 Cr, got ${stats?.funding_facilitated}`);
   if (stats?.median_sanction_time !== "15 days") throw new Error(`Expected 15 days, got ${stats?.median_sanction_time}`);
   if (stats?.lender_relationships !== "86+") throw new Error(`Expected 86+, got ${stats?.lender_relationships}`);
   if (stats?.best_secured_rate !== "7.5%") throw new Error(`Expected 7.5%, got ${stats?.best_secured_rate}`);
@@ -69,6 +69,8 @@ async function testPublicEndpoint() {
         console.log("HTTP Status:", res.statusCode);
 
         const checks = [
+          { name: "₹150 Cr", ok: body.includes("₹150 Cr") },
+          { name: "380 Cr removed", ok: !body.includes("380 Cr") },
           { name: "15 days", ok: body.includes("15 days") },
           { name: "86+", ok: body.includes("86+") },
           { name: "7.5%", ok: body.includes("7.5%") },

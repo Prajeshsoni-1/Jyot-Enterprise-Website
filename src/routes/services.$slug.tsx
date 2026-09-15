@@ -100,7 +100,7 @@ function ServicePage() {
           {(slug === "financial" && cms.financialConfig?.statistics
             ? [
                 {
-                  k: cms.financialConfig.statistics.funding_facilitated || "₹380 Cr",
+                  k: cms.financialConfig.statistics.funding_facilitated || "₹150 Cr",
                   v: "Funding facilitated",
                 },
                 {

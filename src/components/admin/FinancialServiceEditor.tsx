@@ -441,7 +441,7 @@ export function FinancialServiceEditor({ id }: { id?: string }) {
                       statistics: { ...prev.statistics, funding_facilitated: e.target.value },
                     }));
                   }}
-                  placeholder="e.g. ₹380 Cr"
+                  placeholder="e.g. ₹150 Cr"
                   className="w-full rounded-2xl border border-border bg-background px-3.5 py-2.5 text-sm font-semibold text-ink outline-none focus:border-primary"
                 />
                 <p className="text-[0.7rem] text-muted-foreground">Label: Funding facilitated</p>

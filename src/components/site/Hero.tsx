@@ -87,7 +87,7 @@ export function Hero({ title, body, ctaLabel }: HeroOverrides = {}) {
           >
             {[
               { k: "1,450+", v: "Mandates delivered" },
-              { k: "₹380 Cr", v: "Funding facilitated" },
+              { k: "₹150 Cr", v: "Funding facilitated" },
               { k: "98%", v: "Retention rate" },
             ].map((s) => (
               <div key={s.v} className="min-w-0">

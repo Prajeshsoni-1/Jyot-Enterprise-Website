@@ -50,7 +50,7 @@ export type FinancialShowcaseConfig = {
 };
 
 export const DEFAULT_FINANCIAL_STATISTICS: FinancialStatistics = {
-  funding_facilitated: "₹380 Cr",
+  funding_facilitated: "₹150 Cr",
   median_sanction_time: "15 days",
   lender_relationships: "86+",
   best_secured_rate: "7.5%",
