@@ -20,7 +20,7 @@ const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABAS
 
 async function inspect() {
   const { data: users, error: uErr } = await supabase.auth.admin.listUsers();
-  console.log("Auth Users:", users?.users?.map(u => ({ id: u.id, email: u.email })), uErr);
+  console.log("Auth Users:", users?.users?.map(u => ({ id: u.id, email: u.email, created: u.created_at, last_sign_in: u.last_sign_in_at })), uErr);
 
   const { data: roles, error: rErr } = await supabase.from("user_roles").select("*");
   console.log("User Roles:", roles, rErr);

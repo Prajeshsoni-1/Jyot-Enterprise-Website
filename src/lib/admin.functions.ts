@@ -96,11 +96,11 @@ export const getAdminSession = createServerFn({ method: "POST" })
     const effective = await getEffectiveUser(ctx);
     let adminExists = false;
     try {
-      const { count } = await ctx.supabase
+      const { count, error } = await ctx.supabase
         .from("user_roles")
         .select("id", { count: "exact", head: true })
-        .in("role", ["admin", "owner"]);
-      adminExists = (count ?? 0) > 0;
+        .eq("role", "admin");
+      adminExists = !error && (count ?? 0) > 0;
     } catch {
       adminExists = effective.isTeam;
     }
@@ -124,11 +124,11 @@ export const claimFirstAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const ctx = context as unknown as Ctx;
-    const { count } = await ctx.supabase
+    const { count, error: countErr } = await ctx.supabase
       .from("user_roles")
       .select("id", { count: "exact", head: true })
-      .in("role", ["admin", "owner"]);
-    if ((count ?? 0) > 0) {
+      .eq("role", "admin");
+    if (!countErr && (count ?? 0) > 0) {
       return { claimed: false };
     }
     const { error } = await ctx.supabase

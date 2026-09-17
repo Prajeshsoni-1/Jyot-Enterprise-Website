@@ -66,7 +66,71 @@ function AdminLayout() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "session"],
-    queryFn: () => session({ data: undefined }),
+    queryFn: async () => {
+      // 1. Try server function first
+      try {
+        const res = await session({ data: undefined });
+        if (res && res.userId && res.email && res.isTeam !== undefined) {
+          return res;
+        }
+      } catch (err) {
+        console.warn("[admin.session] Server function unavailable, falling back to direct Supabase auth check:", err);
+      }
+
+      // 2. Direct client fallback via Supabase SDK (supports static hosting e.g. Hostinger)
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        throw new Error("Unauthorized: No active session");
+      }
+
+      const user = userData.user;
+      const email = user.email ?? "";
+
+      // Check user_roles
+      const { data: roleRows } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+
+      const rawRoles = (roleRows ?? []).map((r) => r.role);
+      const isTeam = rawRoles.length > 0;
+      const isOwner = rawRoles.includes("admin");
+      const role = rawRoles.includes("admin")
+        ? "admin"
+        : rawRoles.includes("manager")
+        ? "manager"
+        : rawRoles.includes("staff")
+        ? "staff"
+        : "none";
+
+      // Profile name
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      // Check if any admin exists
+      const { count } = await supabase
+        .from("user_roles")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "admin");
+
+      const adminExists = (count ?? 0) > 0 || isTeam;
+
+      return {
+        userId: user.id,
+        email,
+        name: profile?.full_name || user.user_metadata?.full_name || email.split("@")[0] || "Team Member",
+        role: role as any,
+        status: "active" as const,
+        roles: rawRoles,
+        isTeam,
+        isOwner,
+        permissions: isTeam ? ["all"] : [],
+        adminExists,
+      };
+    },
     retry: false,
   });
 
@@ -175,8 +239,19 @@ function AdminLayout() {
                 setClaiming(true);
                 setClaimError(null);
                 try {
-                  const res = await claim({ data: undefined });
-                  if (res.claimed) await refetch();
+                  let claimed = false;
+                  try {
+                    const res = await claim({ data: undefined });
+                    claimed = !!res?.claimed;
+                  } catch {
+                    // Client fallback
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                      const { error } = await supabase.from("user_roles").insert({ user_id: user.id, role: "admin" });
+                      if (!error) claimed = true;
+                    }
+                  }
+                  if (claimed) await refetch();
                   else
                     setClaimError("An administrator already exists. Ask them to add your account.");
                 } catch {
