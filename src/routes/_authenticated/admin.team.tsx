@@ -36,6 +36,7 @@ import {
   triggerPasswordReset,
   deleteAdminUser,
 } from "@/lib/admin.functions";
+import { fetchClientAccounts } from "@/lib/admin-client";
 import {
   PERMISSION_MODULES,
   ROLE_DEFAULTS,
@@ -171,7 +172,17 @@ function TeamManagementPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "accounts"],
-    queryFn: () => fetchAccounts({ data: undefined }),
+    queryFn: async () => {
+      try {
+        const res = await fetchAccounts({ data: undefined });
+        if (res && Array.isArray((res as any).accounts) && (res as any).accounts.length > 0) {
+          return res;
+        }
+      } catch (err) {
+        console.warn("[admin.team] Server listAccounts failed, falling back to direct Supabase accounts fetch:", err);
+      }
+      return fetchClientAccounts();
+    },
     retry: false,
   });
 

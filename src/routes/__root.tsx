@@ -168,35 +168,69 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const settings = (Route.useLoaderData()?.settings ?? DEFAULT_SITE_SETTINGS) as SiteSettings;
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const routerState = useRouterState();
+  const routerPathname = routerState.location.pathname;
 
-  // Admin and sign-in screens run without the public marketing chrome.
-  const isConsole = !isPublicPath(pathname);
+  // Multi-tier detection for admin / auth routes:
+  // 1. Matches array inspection (matches contains routeId and pathname)
+  const isMatchConsole = routerState.matches.some((m) => {
+    const id = (m.routeId || "").toLowerCase();
+    const p = (m.pathname || "").toLowerCase();
+    return (
+      id.includes("_authenticated") ||
+      id.includes("/admin") ||
+      id.includes("/auth") ||
+      p.startsWith("/admin") ||
+      p.includes("/admin") ||
+      p.startsWith("/auth") ||
+      p.includes("/auth")
+    );
+  });
+
+  // 2. Browser window pathname check
+  const isWindowConsole =
+    typeof window !== "undefined" &&
+    (window.location.pathname.startsWith("/admin") ||
+      window.location.pathname.includes("/admin") ||
+      window.location.pathname.startsWith("/auth") ||
+      window.location.pathname.includes("/auth"));
+
+  // 3. Router pathname check
+  const isPathConsole = !isPublicPath(routerPathname);
+
+  // Admin and sign-in screens run completely isolated without any public marketing chrome.
+  const isConsole = isMatchConsole || isWindowConsole || isPathConsole;
 
   useEffect(() => {
     // Only track real visitors on public website routes; strictly exclude /admin/* and /auth/*
-    if (isPublicPath(pathname)) {
+    if (!isConsole && isPublicPath(routerPathname)) {
       initAnalytics(settings?.analytics?.ga4);
-      trackPageView(pathname);
+      trackPageView(routerPathname);
     }
-  }, [pathname, settings?.analytics?.ga4]);
+  }, [isConsole, routerPathname, settings?.analytics?.ga4]);
 
   return (
     <QueryClientProvider client={queryClient}>
       <SiteSettingsContext.Provider value={settings}>
-        <a
-          href="#main-content"
-          className="sr-only rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100]"
-        >
-          Skip to main content
-        </a>
-        {isConsole ? null : <Header />}
-        <main id="main-content">
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        {isConsole ? (
           <Outlet />
-        </main>
-        {isConsole ? null : <Footer />}
-        {isConsole ? null : <FloatingTools />}
+        ) : (
+          <>
+            <a
+              href="#main-content"
+              className="sr-only rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100]"
+            >
+              Skip to main content
+            </a>
+            <Header />
+            <main id="main-content">
+              {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+              <Outlet />
+            </main>
+            <Footer />
+            <FloatingTools />
+          </>
+        )}
       </SiteSettingsContext.Provider>
     </QueryClientProvider>
   );

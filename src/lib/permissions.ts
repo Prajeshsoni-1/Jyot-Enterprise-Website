@@ -331,10 +331,27 @@ export function hasPermission(
   action: PermissionAction,
 ): boolean {
   if (!effectivePermissions) return false;
-  const key = `${module}.${action}`;
   if (effectivePermissions instanceof Set) {
+    if (
+      effectivePermissions.has("*") ||
+      effectivePermissions.has("all") ||
+      effectivePermissions.has(`${module}.*`) ||
+      effectivePermissions.has(`${module}.all`)
+    ) {
+      return true;
+    }
+    const key = `${module}.${action}`;
     return effectivePermissions.has(key) || effectivePermissions.has(`${module}.manage`);
   }
+  if (
+    effectivePermissions.includes("*") ||
+    effectivePermissions.includes("all") ||
+    effectivePermissions.includes(`${module}.*`) ||
+    effectivePermissions.includes(`${module}.all`)
+  ) {
+    return true;
+  }
+  const key = `${module}.${action}`;
   return (
     effectivePermissions.includes(key) || effectivePermissions.includes(`${module}.manage`)
   );

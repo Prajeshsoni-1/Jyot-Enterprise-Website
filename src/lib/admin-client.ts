@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { calculateEffectivePermissions } from "@/lib/permissions";
 
 const CLOSED = ["won", "lost", "archived"];
 
@@ -681,3 +682,134 @@ export async function deleteClientNotification(id: string) {
   if (error) throw new Error(error.message);
   return { success: true };
 }
+
+// -------------------------------------------------------------
+// 11. TEAM & ACCOUNTS
+// -------------------------------------------------------------
+
+export async function fetchClientAccounts() {
+  const { data: userData } = await supabase.auth.getUser();
+  const currentUser = userData?.user;
+
+  // 1. Fetch user_roles
+  const { data: roleRows, error: roleError } = await supabase
+    .from("user_roles")
+    .select("user_id, role");
+  if (roleError) {
+    console.warn("[admin-client] Error loading user_roles:", roleError.message);
+  }
+
+  // 2. Fetch profiles
+  const { data: profiles, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, created_at");
+  if (profileError) {
+    console.warn("[admin-client] Error loading profiles:", profileError.message);
+  }
+
+  // 3. Fetch user_permissions if table exists
+  let dbPerms: any[] = [];
+  try {
+    const { data: pData } = await supabase
+      .from("user_permissions")
+      .select("user_id, module, action, granted");
+    if (pData) dbPerms = pData;
+  } catch {
+    // optional table
+  }
+
+  const profileMap = new Map<string, { name: string; email: string | null; createdAt?: string }>();
+  (profiles ?? []).forEach((p: any) => {
+    profileMap.set(p.id, {
+      name: p.full_name || p.email?.split("@")[0] || "Team Member",
+      email: p.email ?? null,
+      createdAt: p.created_at,
+    });
+  });
+
+  // Collect all unique user IDs
+  const userIds = new Set<string>();
+  if (currentUser) userIds.add(currentUser.id);
+  (roleRows ?? []).forEach((r: any) => userIds.add(r.user_id));
+  (profiles ?? []).forEach((p: any) => userIds.add(p.id));
+
+  // Group roles by user_id
+  const rolesByUser = new Map<string, string[]>();
+  (roleRows ?? []).forEach((r: any) => {
+    const current = rolesByUser.get(r.user_id) || [];
+    current.push(r.role);
+    rolesByUser.set(r.user_id, current);
+  });
+
+  const accounts = Array.from(userIds).map((id) => {
+    const prof = profileMap.get(id);
+    const isSelf = id === currentUser?.id;
+    const email = isSelf ? currentUser?.email ?? prof?.email : prof?.email;
+    const name = isSelf
+      ? (currentUser?.user_metadata?.full_name as string) || prof?.name || email?.split("@")[0] || "Team Member"
+      : prof?.name || email?.split("@")[0] || "Team Member";
+
+    const roles = rolesByUser.get(id) || [];
+    let resolvedRole: "owner" | "admin" | "manager" | "staff" = "staff";
+    if (roles.includes("admin")) {
+      resolvedRole = "admin";
+    } else if (roles.includes("manager")) {
+      resolvedRole = "manager";
+    } else if (roles.includes("staff")) {
+      resolvedRole = "staff";
+    } else if (isSelf) {
+      resolvedRole = "admin";
+    }
+
+    const overrides: Record<string, boolean> = {};
+    dbPerms
+      .filter((p: any) => p.user_id === id)
+      .forEach((p: any) => {
+        overrides[`${p.module}.${p.action}`] = Boolean(p.granted);
+      });
+
+    const effective = calculateEffectivePermissions(resolvedRole, overrides);
+
+    return {
+      id,
+      email: email ?? null,
+      name,
+      role: resolvedRole,
+      status: "active" as const,
+      createdAt: prof?.createdAt || new Date().toISOString(),
+      lastSignInAt: null,
+      overrides,
+      effectivePermissions: Array.from(effective),
+      permissionCount: effective.size,
+      hasOverrides: Object.keys(overrides).length > 0,
+      isSelf,
+      isOwner: resolvedRole === "owner" || resolvedRole === "admin",
+    };
+  });
+
+  if (accounts.length === 0 && currentUser) {
+    const effective = calculateEffectivePermissions("admin");
+    accounts.push({
+      id: currentUser.id,
+      email: currentUser.email ?? null,
+      name: (currentUser.user_metadata?.full_name as string) || currentUser.email?.split("@")[0] || "Team Admin",
+      role: "admin",
+      status: "active" as const,
+      createdAt: currentUser.created_at || new Date().toISOString(),
+      lastSignInAt: currentUser.last_sign_in_at ?? null,
+      overrides: {},
+      effectivePermissions: Array.from(effective),
+      permissionCount: effective.size,
+      hasOverrides: false,
+      isSelf: true,
+      isOwner: true,
+    });
+  }
+
+  return {
+    accounts,
+    isCallerOwner: accounts.some((a) => a.isSelf && (a.role === "owner" || a.role === "admin")),
+    callerId: currentUser?.id || "",
+  };
+}
+

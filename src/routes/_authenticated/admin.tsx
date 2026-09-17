@@ -5,19 +5,34 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import {
+  BarChart3,
+  Bell,
+  Briefcase,
   Building2,
   CalendarClock,
+  ChevronDown,
+  ChevronUp,
   Clock,
   FileCheck2,
+  FileText,
+  FolderKanban,
+  GraduationCap,
+  HelpCircle,
   Inbox,
+  Images,
+  Landmark,
+  Layers,
   LayoutDashboard,
   ListChecks,
   LogOut,
+  MapPin,
   Menu,
+  MessageSquareQuote,
   PanelsTopLeft,
   Search,
   Settings2,
   ShieldCheck,
+  Sparkles,
   Users,
   X,
 } from "lucide-react";
@@ -29,7 +44,7 @@ import { NotificationCenter } from "@/components/admin/NotificationCenter";
 import { Toaster } from "@/components/ui/sonner";
 import { Logo } from "@/components/site/Logo";
 import { pageMeta } from "@/lib/seo";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, calculateEffectivePermissions, type Role } from "@/lib/permissions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -52,6 +67,7 @@ function AdminLayout() {
   const [claimError, setClaimError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [cmsOpen, setCmsOpen] = useState(true);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -117,17 +133,19 @@ function AdminLayout() {
         .eq("role", "admin");
 
       const adminExists = (count ?? 0) > 0 || isTeam;
+      const normalizedRole = (role === "none" && isTeam ? "admin" : role) as Role;
+      const effectivePerms = calculateEffectivePermissions(normalizedRole);
 
       return {
         userId: user.id,
         email,
         name: profile?.full_name || user.user_metadata?.full_name || email.split("@")[0] || "Team Member",
-        role: role as any,
+        role: normalizedRole as any,
         status: "active" as const,
         roles: rawRoles,
         isTeam,
-        isOwner,
-        permissions: isTeam ? ["all"] : [],
+        isOwner: normalizedRole === "owner" || normalizedRole === "admin",
+        permissions: Array.from(effectivePerms),
         adminExists,
       };
     },
@@ -276,25 +294,31 @@ function AdminLayout() {
     );
   }
 
+  const isPrivileged = data.role === "owner" || data.role === "admin";
   const userPerms = data.permissions;
-  const canViewLeads = hasPermission(userPerms, "enquiries", "view");
-  const canViewCustomers = hasPermission(userPerms, "customers", "view");
-  const canViewBookings = hasPermission(userPerms, "bookings", "view");
-  const canViewTasks = hasPermission(userPerms, "tasks", "view");
-  const canViewFollowups = canViewTasks || canViewLeads;
+  const canViewLeads = isPrivileged || hasPermission(userPerms, "enquiries", "view");
+  const canViewCustomers = isPrivileged || hasPermission(userPerms, "customers", "view");
+  const canViewBookings = isPrivileged || hasPermission(userPerms, "bookings", "view");
+  const canViewTasks = isPrivileged || hasPermission(userPerms, "tasks", "view");
+  const canViewFollowups = isPrivileged || canViewTasks || canViewLeads;
   const canViewDocs =
+    isPrivileged ||
     hasPermission(userPerms, "downloads", "view") ||
     hasPermission(userPerms, "media", "view") ||
     hasPermission(userPerms, "enquiries", "view");
   const canViewWebsite =
+    isPrivileged ||
     hasPermission(userPerms, "website", "view") ||
     hasPermission(userPerms, "blogs", "view") ||
     hasPermission(userPerms, "services", "view");
   const canViewTeam =
+    isPrivileged ||
     hasPermission(userPerms, "system", "view") ||
-    hasPermission(userPerms, "system", "manage") ||
-    data.role === "owner" ||
-    data.role === "admin";
+    hasPermission(userPerms, "system", "manage");
+  const canViewSeo =
+    isPrivileged ||
+    hasPermission(userPerms, "seo", "view") ||
+    hasPermission(userPerms, "website", "view");
 
   const userInitials = (data.name || data.email || "U")
     .split(" ")
@@ -304,14 +328,33 @@ function AdminLayout() {
     .toUpperCase();
 
   const navLinkClass =
-    "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-muted-foreground transition-all hover:bg-secondary/70 hover:text-ink";
+    "group flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold text-muted-foreground transition-all hover:bg-secondary/70 hover:text-ink";
   const navLinkActive = {
     className:
       "bg-primary/10 text-primary font-bold shadow-2xs hover:bg-primary/15 hover:text-primary",
   };
+  const subNavLinkClass =
+    "group flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[0.75rem] font-medium text-muted-foreground transition-all hover:bg-secondary/70 hover:text-ink";
+
+  const cmsSubItems = [
+    { label: "Services", module: "services", icon: Sparkles },
+    { label: "Industries", module: "industries", icon: Building2 },
+    { label: "Portfolio", module: "projects", icon: FolderKanban },
+    { label: "Case Studies", module: "case_studies", icon: FileText },
+    { label: "Blogs & Insights", module: "posts", icon: FileText },
+    { label: "Resources", module: "resources", icon: FileCheck2 },
+    { label: "FAQs", module: "faqs", icon: HelpCircle },
+    { label: "Products / Platforms", module: "products", icon: Layers },
+    { label: "Testimonials", module: "testimonials", icon: MessageSquareQuote },
+    { label: "Team & Leadership", module: "team_members", icon: Users },
+    { label: "Offices / Contact", module: "offices", icon: MapPin },
+    { label: "Careers & Jobs", module: "jobs", icon: Briefcase },
+    { label: "Homepage / Pages", module: "pages", icon: PanelsTopLeft },
+  ];
 
   const NavigationMenu = ({ isMobile = false }: { isMobile?: boolean }) => (
-    <nav className="flex flex-col gap-6 py-2">
+    <nav className="flex flex-col gap-5 py-2">
+      {/* 1. CORE OPERATIONS */}
       <div>
         <p className="px-3 text-[0.68rem] font-bold uppercase tracking-wider text-muted-foreground/80">
           Core Operations
@@ -327,74 +370,164 @@ function AdminLayout() {
             <LayoutDashboard className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
             <span>Dashboard</span>
           </Link>
-
-          {canViewLeads && (
-            <Link
-              to="/admin/enquiries"
-              activeProps={navLinkActive}
-              className={navLinkClass}
-              onClick={() => isMobile && setSidebarOpen(false)}
-            >
-              <Inbox className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
-              <span>Leads</span>
-            </Link>
-          )}
-
-          {canViewCustomers && (
-            <Link
-              to="/admin/customers"
-              activeProps={navLinkActive}
-              className={navLinkClass}
-              onClick={() => isMobile && setSidebarOpen(false)}
-            >
-              <Building2 className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
-              <span>Customers</span>
-            </Link>
-          )}
-
-          {canViewBookings && (
-            <Link
-              to="/admin/bookings"
-              activeProps={navLinkActive}
-              className={navLinkClass}
-              onClick={() => isMobile && setSidebarOpen(false)}
-            >
-              <CalendarClock className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
-              <span>Bookings</span>
-            </Link>
-          )}
-
-          {canViewFollowups && (
-            <Link
-              to="/admin/followups"
-              activeProps={navLinkActive}
-              className={navLinkClass}
-              onClick={() => isMobile && setSidebarOpen(false)}
-            >
-              <Clock className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
-              <span>Follow-ups</span>
-            </Link>
-          )}
-
-          {canViewTasks && (
-            <Link
-              to="/admin/tasks"
-              activeProps={navLinkActive}
-              className={navLinkClass}
-              onClick={() => isMobile && setSidebarOpen(false)}
-            >
-              <ListChecks className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
-              <span>Tasks</span>
-            </Link>
-          )}
         </div>
       </div>
 
+      {/* 2. CRM / BUSINESS OPERATIONS */}
+      {(canViewLeads || canViewCustomers || canViewBookings || canViewFollowups || canViewTasks) && (
+        <div>
+          <p className="px-3 text-[0.68rem] font-bold uppercase tracking-wider text-muted-foreground/80">
+            CRM / Operations
+          </p>
+          <div className="mt-2 space-y-1">
+            {canViewLeads && (
+              <Link
+                to="/admin/enquiries"
+                activeProps={navLinkActive}
+                className={navLinkClass}
+                onClick={() => isMobile && setSidebarOpen(false)}
+              >
+                <Inbox className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
+                <span>Leads / Enquiries</span>
+              </Link>
+            )}
+
+            {canViewCustomers && (
+              <Link
+                to="/admin/customers"
+                activeProps={navLinkActive}
+                className={navLinkClass}
+                onClick={() => isMobile && setSidebarOpen(false)}
+              >
+                <Building2 className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
+                <span>Customers</span>
+              </Link>
+            )}
+
+            {canViewBookings && (
+              <Link
+                to="/admin/bookings"
+                activeProps={navLinkActive}
+                className={navLinkClass}
+                onClick={() => isMobile && setSidebarOpen(false)}
+              >
+                <CalendarClock className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
+                <span>Bookings</span>
+              </Link>
+            )}
+
+            {canViewFollowups && (
+              <Link
+                to="/admin/followups"
+                activeProps={navLinkActive}
+                className={navLinkClass}
+                onClick={() => isMobile && setSidebarOpen(false)}
+              >
+                <Clock className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
+                <span>Follow-ups</span>
+              </Link>
+            )}
+
+            {canViewTasks && (
+              <Link
+                to="/admin/tasks"
+                activeProps={navLinkActive}
+                className={navLinkClass}
+                onClick={() => isMobile && setSidebarOpen(false)}
+              >
+                <ListChecks className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
+                <span>Tasks</span>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3. WEBSITE / CMS */}
+      {canViewWebsite && (
+        <div>
+          <div className="flex items-center justify-between px-3">
+            <p className="text-[0.68rem] font-bold uppercase tracking-wider text-muted-foreground/80">
+              Website / CMS
+            </p>
+            <button
+              type="button"
+              onClick={() => setCmsOpen((prev) => !prev)}
+              className="text-[0.65rem] font-semibold text-muted-foreground hover:text-primary transition flex items-center gap-0.5 px-1 py-0.5 rounded hover:bg-secondary"
+              title={cmsOpen ? "Collapse CMS modules" : "Expand CMS modules"}
+            >
+              <span>{cmsOpen ? "Hide" : "Show"}</span>
+              {cmsOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+          </div>
+          <div className="mt-2 space-y-1">
+            <Link
+              to="/admin/website"
+              activeOptions={{ exact: true }}
+              activeProps={navLinkActive}
+              className={navLinkClass}
+              onClick={() => isMobile && setSidebarOpen(false)}
+            >
+              <PanelsTopLeft className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
+              <span>Website Overview</span>
+            </Link>
+
+            {cmsOpen && (
+              <div className="pl-3 border-l border-border/70 ml-3 space-y-0.5 mt-1 pt-1">
+                {cmsSubItems.map((item) => (
+                  <Link
+                    key={item.module}
+                    to="/admin/website/$module"
+                    params={{ module: item.module }}
+                    activeProps={navLinkActive}
+                    className={subNavLinkClass}
+                    onClick={() => isMobile && setSidebarOpen(false)}
+                  >
+                    <item.icon className="h-3.5 w-3.5 shrink-0 transition-colors group-hover:text-primary" />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                ))}
+
+                <Link
+                  to="/admin/website/applications"
+                  activeProps={navLinkActive}
+                  className={subNavLinkClass}
+                  onClick={() => isMobile && setSidebarOpen(false)}
+                >
+                  <GraduationCap className="h-3.5 w-3.5 shrink-0 transition-colors group-hover:text-primary" />
+                  <span className="truncate">Applications</span>
+                </Link>
+
+                <Link
+                  to="/admin/website/financial"
+                  activeProps={navLinkActive}
+                  className={subNavLinkClass}
+                  onClick={() => isMobile && setSidebarOpen(false)}
+                >
+                  <Landmark className="h-3.5 w-3.5 shrink-0 transition-colors group-hover:text-primary" />
+                  <span className="truncate">Financial Showcase</span>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 4. FILES & MEDIA */}
       <div>
         <p className="px-3 text-[0.68rem] font-bold uppercase tracking-wider text-muted-foreground/80">
           Files & Media
         </p>
         <div className="mt-2 space-y-1">
+          <Link
+            to="/admin/website/media"
+            activeProps={navLinkActive}
+            className={navLinkClass}
+            onClick={() => isMobile && setSidebarOpen(false)}
+          >
+            <Images className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
+            <span>Media Library</span>
+          </Link>
           {canViewDocs && (
             <Link
               to="/admin/documents"
@@ -403,29 +536,18 @@ function AdminLayout() {
               onClick={() => isMobile && setSidebarOpen(false)}
             >
               <FileCheck2 className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
-              <span>Documents</span>
+              <span>Documents / Downloads</span>
             </Link>
           )}
         </div>
       </div>
 
+      {/* 5. PLATFORM & SYSTEM */}
       <div>
         <p className="px-3 text-[0.68rem] font-bold uppercase tracking-wider text-muted-foreground/80">
           Platform & System
         </p>
         <div className="mt-2 space-y-1">
-          {canViewWebsite && (
-            <Link
-              to="/admin/website"
-              activeProps={navLinkActive}
-              className={navLinkClass}
-              onClick={() => isMobile && setSidebarOpen(false)}
-            >
-              <PanelsTopLeft className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
-              <span>Website / CMS</span>
-            </Link>
-          )}
-
           {canViewTeam && (
             <Link
               to="/admin/team"
@@ -434,9 +556,19 @@ function AdminLayout() {
               onClick={() => isMobile && setSidebarOpen(false)}
             >
               <Users className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
-              <span>Team</span>
+              <span>Team & RBAC</span>
             </Link>
           )}
+
+          <Link
+            to="/admin/notifications"
+            activeProps={navLinkActive}
+            className={navLinkClass}
+            onClick={() => isMobile && setSidebarOpen(false)}
+          >
+            <Bell className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
+            <span>Notifications</span>
+          </Link>
 
           <Link
             to="/admin/website/settings"
@@ -450,6 +582,38 @@ function AdminLayout() {
           </Link>
         </div>
       </div>
+
+      {/* 6. SEO / CONFIGURATION */}
+      {canViewSeo && (
+        <div>
+          <p className="px-3 text-[0.68rem] font-bold uppercase tracking-wider text-muted-foreground/80">
+            SEO / Configuration
+          </p>
+          <div className="mt-2 space-y-1">
+            <Link
+              to="/admin/website/settings"
+              search={{ tab: "seo" }}
+              activeProps={navLinkActive}
+              className={navLinkClass}
+              onClick={() => isMobile && setSidebarOpen(false)}
+            >
+              <Search className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
+              <span>SEO & Sitemap</span>
+            </Link>
+
+            <Link
+              to="/admin/website/settings"
+              search={{ tab: "analytics" }}
+              activeProps={navLinkActive}
+              className={navLinkClass}
+              onClick={() => isMobile && setSidebarOpen(false)}
+            >
+              <BarChart3 className="h-4 w-4 shrink-0 transition-colors group-hover:text-primary" />
+              <span>Analytics & Tag</span>
+            </Link>
+          </div>
+        </div>
+      )}
     </nav>
   );
 
@@ -472,8 +636,8 @@ function AdminLayout() {
       >
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <Link to="/" className="shrink-0" onClick={() => setSidebarOpen(false)}>
-              <Logo />
+            <Link to="/admin" className="shrink-0" onClick={() => setSidebarOpen(false)}>
+              <Logo variant="compact" />
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -520,8 +684,8 @@ function AdminLayout() {
           <div className="flex flex-col flex-1 p-5 overflow-y-auto">
             {/* Branding Header */}
             <div className="flex items-center justify-between pb-5 border-b border-border/60">
-              <Link to="/" className="shrink-0">
-                <Logo />
+              <Link to="/admin" className="shrink-0">
+                <Logo variant="compact" />
               </Link>
               <span className="inline-flex items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[0.62rem] font-bold text-primary border border-primary/20">
                 Admin OS

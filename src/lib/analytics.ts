@@ -68,8 +68,13 @@ export function isPublicPath(pathname: string | undefined | null): boolean {
   const p = pathname.toLowerCase().trim();
   if (
     p.startsWith("/admin") ||
+    p.includes("/admin") ||
+    p.startsWith("/_authenticated") ||
+    p.includes("_authenticated") ||
     p.startsWith("/auth") ||
-    p.startsWith("/api")
+    p.includes("/auth") ||
+    p.startsWith("/api") ||
+    p.includes("/api")
   ) {
     return false;
   }
