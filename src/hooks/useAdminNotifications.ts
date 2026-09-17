@@ -15,6 +15,13 @@ import {
   markAllNotificationsRead,
   deleteNotification,
 } from "@/lib/notifications.functions";
+import {
+  fetchClientNotifications,
+  fetchClientUnreadCount,
+  markClientNotificationRead,
+  markAllClientNotificationsRead,
+  deleteClientNotification,
+} from "@/lib/admin-client";
 
 /**
  * Synthesize a gentle two-tone notification chime using Web Audio API.
@@ -110,7 +117,15 @@ export function useAdminNotifications(options?: {
   // 1. Unread count query
   const unreadCountQuery = useQuery({
     queryKey: ["admin", "notifications-unread-count"],
-    queryFn: () => fetchUnreadCount({ data: undefined }),
+    queryFn: async () => {
+      try {
+        const res = await fetchUnreadCount({ data: undefined });
+        if (res && typeof res.count === "number") return res;
+      } catch (err) {
+        console.warn("[useAdminNotifications] ServerFn failed for count, fallback to client:", err);
+      }
+      return await fetchClientUnreadCount();
+    },
     refetchInterval: 30_000, // Background heartbeat polling as fail-safe fallback
     staleTime: 10_000,
   });
@@ -118,13 +133,27 @@ export function useAdminNotifications(options?: {
   // 2. Notifications list query
   const listQuery = useQuery({
     queryKey: ["admin", "notifications", { filter, search, page, pageSize }],
-    queryFn: () => fetchList({ data: { filter, search, page, pageSize } }),
+    queryFn: async () => {
+      try {
+        const res = await fetchList({ data: { filter, search, page, pageSize } });
+        if (res && Array.isArray(res.notifications)) return res;
+      } catch (err) {
+        console.warn("[useAdminNotifications] ServerFn failed for list, fallback to client:", err);
+      }
+      return await fetchClientNotifications({ filter, search, page, pageSize });
+    },
     staleTime: 10_000,
   });
 
   // 3. Mark Read Mutation
   const markReadMutation = useMutation({
-    mutationFn: (id: string) => markReadFn({ data: { id, isRead: true } }),
+    mutationFn: async (id: string) => {
+      try {
+        return await markReadFn({ data: { id, isRead: true } });
+      } catch {
+        return await markClientNotificationRead(id, true);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "notifications"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "notifications-unread-count"] });
@@ -133,7 +162,13 @@ export function useAdminNotifications(options?: {
 
   // 4. Mark All Read Mutation
   const markAllReadMutation = useMutation({
-    mutationFn: () => markAllReadFn({ data: undefined }),
+    mutationFn: async () => {
+      try {
+        return await markAllReadFn({ data: undefined });
+      } catch {
+        return await markAllClientNotificationsRead();
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "notifications"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "notifications-unread-count"] });
@@ -142,7 +177,13 @@ export function useAdminNotifications(options?: {
 
   // 5. Delete Mutation
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteNotifFn({ data: { id } }),
+    mutationFn: async (id: string) => {
+      try {
+        return await deleteNotifFn({ data: { id } });
+      } catch {
+        return await deleteClientNotification(id);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "notifications"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "notifications-unread-count"] });

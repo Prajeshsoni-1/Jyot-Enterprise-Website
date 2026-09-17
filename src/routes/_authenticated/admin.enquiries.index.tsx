@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { listEnquiries, listTeam } from "@/lib/admin.functions";
+import { fetchClientEnquiries, fetchClientTeam } from "@/lib/admin-client";
 import {
   DIVISION_LABEL,
   DIVISION_OPTIONS,
@@ -100,13 +101,29 @@ function EnquiryList() {
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["admin", "enquiries", filters],
-    queryFn: () => fetchList({ data: filters }),
+    queryFn: async () => {
+      try {
+        const res = await fetchList({ data: filters });
+        if (res && Array.isArray(res.rows)) return res;
+      } catch (err) {
+        console.warn("[admin.enquiries] ServerFn failed, falling back to direct Supabase SDK:", err);
+      }
+      return await fetchClientEnquiries(filters);
+    },
     retry: false,
   });
 
   const { data: team } = useQuery({
     queryKey: ["admin", "team"],
-    queryFn: () => fetchTeam({ data: undefined }),
+    queryFn: async () => {
+      try {
+        const res = await fetchTeam({ data: undefined });
+        if (res && Array.isArray(res)) return res;
+      } catch (err) {
+        console.warn("[admin.team] ServerFn failed, falling back to direct Supabase SDK:", err);
+      }
+      return await fetchClientTeam();
+    },
     retry: false,
   });
 
@@ -119,7 +136,9 @@ function EnquiryList() {
   const selectClass =
     "rounded-full border border-border bg-background px-3 py-2 text-xs font-semibold text-ink outline-none focus:border-primary";
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
+  const totalCount = data?.total ?? 0;
+  const rows = data?.rows ?? [];
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
     <div className="space-y-6">
@@ -130,7 +149,7 @@ function EnquiryList() {
             <h1 className="text-2xl font-extrabold tracking-tight text-ink">Leads & Enquiries</h1>
             {data && (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary border border-primary/20">
-                {data.total} total
+                {totalCount} total
               </span>
             )}
           </div>
@@ -278,9 +297,9 @@ function EnquiryList() {
       {/* 4. Table / Content States */}
       {isLoading ? (
         <Loading label="Loading enquiries…" />
-      ) : isError || !data ? (
+      ) : isError ? (
         <ErrorState message="Could not load enquiries." onRetry={() => refetch()} />
-      ) : data.rows.length === 0 ? (
+      ) : rows.length === 0 ? (
         <EmptyState
           title="No enquiries match these filters"
           body="Try clearing or broadening your search parameters."
@@ -313,7 +332,7 @@ function EnquiryList() {
                 </tr>
               </thead>
               <tbody className={`divide-y divide-border/60 ${isFetching ? "opacity-60" : ""}`}>
-                {data.rows.map((r: any) => {
+                {rows.map((r: any) => {
                   const initials = (r.name || "U")
                     .split(" ")
                     .map((w: string) => w[0])

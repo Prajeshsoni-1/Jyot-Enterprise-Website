@@ -6,6 +6,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { getBooking, listBookings, updateBooking } from "@/lib/booking.functions";
 import {
+  fetchClientBookings,
+  fetchClientBooking,
+  updateClientBooking,
+} from "@/lib/admin-client";
+import {
   BOOKING_STATUSES,
   BOOKING_STATUS_LABEL,
   MEETING_TYPES,
@@ -63,23 +68,44 @@ function BookingsPage() {
 
   const list = useQuery({
     queryKey: ["admin", "bookings", { search, status, division, assignedTo, sort, page }],
-    queryFn: () =>
-      fetchList({
-        data: { search, status, division, assignedTo, sort, page, pageSize: 20 },
-      } as any),
+    queryFn: async () => {
+      try {
+        const res = await fetchList({
+          data: { search, status, division, assignedTo, sort, page, pageSize: 20 },
+        } as any);
+        if (res && Array.isArray(res.rows)) return res;
+      } catch (err) {
+        console.warn("[admin.bookings] ServerFn failed, fallback to client:", err);
+      }
+      return await fetchClientBookings({ search, status, division, assignedTo, sort, page, pageSize: 20 });
+    },
     placeholderData: keepPreviousData,
     retry: false,
   });
 
   const detail = useQuery({
     queryKey: ["admin", "booking", openId],
-    queryFn: () => fetchOne({ data: { id: openId! } } as any),
+    queryFn: async () => {
+      try {
+        const res = await fetchOne({ data: { id: openId! } } as any);
+        if (res && res.id) return res;
+      } catch (err) {
+        // fallback
+      }
+      return await fetchClientBooking(openId!);
+    },
     enabled: !!openId,
     retry: false,
   });
 
   const update = useMutation({
-    mutationFn: (input: Record<string, unknown>) => save({ data: input } as any),
+    mutationFn: async (input: Record<string, unknown>) => {
+      try {
+        return await save({ data: input } as any);
+      } catch {
+        return await updateClientBooking(input);
+      }
+    },
     onSuccess: () => {
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["admin"] });
@@ -87,7 +113,8 @@ function BookingsPage() {
     onError: (e: Error) => setError(e.message),
   });
 
-  const pages = list.data ? Math.max(1, Math.ceil(list.data.total / list.data.pageSize)) : 1;
+  const totalCount = list.data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(totalCount / 20));
 
   // Real counts from current page rows for quick pulse
   const rows = list.data?.rows ?? [];

@@ -15,6 +15,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { listTasks, updateTask } from "@/lib/crm.functions";
+import { fetchClientTasks, updateClientTask } from "@/lib/admin-client";
 import {
   EmptyState,
   ErrorState,
@@ -40,13 +41,31 @@ function TasksPage() {
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["admin", "tasks", { scope, assignment, page }],
-    queryFn: () => fetchTasks({ data: { scope, assignment, page, pageSize: 20 } } as any),
+    queryFn: async () => {
+      try {
+        const res = await fetchTasks({ data: { scope, assignment, page, pageSize: 20 } } as any);
+        if (res && Array.isArray(res.rows)) return res;
+      } catch (err) {
+        console.warn("[admin.tasks] ServerFn failed, fallback to client:", err);
+      }
+      return await fetchClientTasks({
+        status: scope === "open" ? "open" : scope === "completed" ? "completed" : "all",
+        page,
+        pageSize: 20,
+      });
+    },
     placeholderData: keepPreviousData,
     retry: false,
   });
 
   const update = useMutation({
-    mutationFn: (input: Record<string, unknown>) => save({ data: input } as any),
+    mutationFn: async (input: Record<string, unknown>) => {
+      try {
+        return await save({ data: input } as any);
+      } catch {
+        return await updateClientTask(input);
+      }
+    },
     onSuccess: () => {
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["admin"] });
@@ -54,7 +73,8 @@ function TasksPage() {
     onError: (e: Error) => setError(e.message),
   });
 
-  const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  const totalCount = data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(totalCount / 20));
 
   return (
     <div className="space-y-6">

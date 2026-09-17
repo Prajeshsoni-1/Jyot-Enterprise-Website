@@ -14,6 +14,14 @@ import {
   updateEnquiry,
 } from "@/lib/admin.functions";
 import { convertLeadToCustomer, listFollowUps, listTasks } from "@/lib/crm.functions";
+import {
+  fetchClientEnquiry,
+  updateClientEnquiry,
+  addClientEnquiryNote,
+  fetchClientTeam,
+  fetchClientFollowUps,
+  fetchClientTasks,
+} from "@/lib/admin-client";
 import { DocumentPanel } from "@/components/admin/DocumentPanel";
 import { FollowUpPanel, TaskPanel } from "@/components/admin/WorkPanels";
 import {
@@ -60,12 +68,28 @@ function EnquiryDetail() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "enquiry", id],
-    queryFn: () => fetchEnquiry({ data: { id } }),
+    queryFn: async () => {
+      try {
+        const res = await fetchEnquiry({ data: { id } });
+        if (res && res.lead) return res;
+      } catch (err) {
+        console.warn("[admin.enquiry] ServerFn failed, fallback to client:", err);
+      }
+      return await fetchClientEnquiry(id);
+    },
     retry: false,
   });
   const { data: team } = useQuery({
     queryKey: ["admin", "team"],
-    queryFn: () => fetchTeam({ data: undefined }),
+    queryFn: async () => {
+      try {
+        const res = await fetchTeam({ data: undefined });
+        if (res && Array.isArray(res)) return res;
+      } catch {
+        // fallback
+      }
+      return await fetchClientTeam();
+    },
     retry: false,
   });
   const fetchSession = useServerFn(getAdminSession);
@@ -79,12 +103,28 @@ function EnquiryDetail() {
   const convert = useServerFn(convertLeadToCustomer);
   const { data: followUps } = useQuery({
     queryKey: ["admin", "followups", "lead", id],
-    queryFn: () => fetchLeadFollowUps({ data: { leadId: id, scope: "all", pageSize: 50 } } as any),
+    queryFn: async () => {
+      try {
+        const res = await fetchLeadFollowUps({ data: { leadId: id, scope: "all", pageSize: 50 } } as any);
+        if (res && Array.isArray(res.rows)) return res;
+      } catch {
+        // fallback
+      }
+      return await fetchClientFollowUps({ leadId: id, scope: "all", pageSize: 50 });
+    },
     retry: false,
   });
   const { data: leadTasks } = useQuery({
     queryKey: ["admin", "tasks", "lead", id],
-    queryFn: () => fetchLeadTasks({ data: { leadId: id, scope: "all", pageSize: 50 } } as any),
+    queryFn: async () => {
+      try {
+        const res = await fetchLeadTasks({ data: { leadId: id, scope: "all", pageSize: 50 } } as any);
+        if (res && Array.isArray(res.rows)) return res;
+      } catch {
+        // fallback
+      }
+      return await fetchClientTasks({ leadId: id, scope: "all", pageSize: 50 });
+    },
     retry: false,
   });
   const convertMutation = useMutation({
@@ -100,7 +140,13 @@ function EnquiryDetail() {
     session?.roles?.includes("admin") === true || session?.roles?.includes("manager") === true;
 
   const update = useMutation({
-    mutationFn: (patch: Record<string, unknown>) => saveEnquiry({ data: { id, ...patch } } as any),
+    mutationFn: async (patch: Record<string, unknown>) => {
+      try {
+        return await saveEnquiry({ data: { id, ...patch } } as any);
+      } catch {
+        return await updateClientEnquiry(id, patch);
+      }
+    },
     onSuccess: () => {
       setFeedback({ tone: "ok", text: "Saved." });
       queryClient.invalidateQueries({ queryKey: ["admin"] });
@@ -109,7 +155,13 @@ function EnquiryDetail() {
   });
 
   const noteMutation = useMutation({
-    mutationFn: (text: string) => saveNote({ data: { id, note: text } }),
+    mutationFn: async (text: string) => {
+      try {
+        return await saveNote({ data: { id, note: text } });
+      } catch {
+        return await addClientEnquiryNote(id, text);
+      }
+    },
     onSuccess: () => {
       setNote("");
       setFeedback({ tone: "ok", text: "Note added." });
@@ -119,9 +171,8 @@ function EnquiryDetail() {
   });
 
   if (isLoading) return <Loading label="Loading enquiry…" />;
-  if (isError)
+  if (isError || !data?.lead)
     return <ErrorState message="Could not load this enquiry." onRetry={() => refetch()} />;
-  if (!data) return <EmptyState title="Enquiry not found" body="It may have been removed." />;
 
   const lead = data.lead as any;
   const details = (lead.details ?? {}) as Record<string, unknown>;

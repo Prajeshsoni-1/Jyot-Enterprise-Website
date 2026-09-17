@@ -27,6 +27,8 @@ import {
 import { getAdminDashboard, getAdminSession } from "@/lib/admin.functions";
 import { getCrmMetrics } from "@/lib/crm.functions";
 import { getUnreadNotificationCount } from "@/lib/notifications.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { fetchClientDashboard, fetchClientCrmMetrics } from "@/lib/admin-client";
 import {
   DIVISION_LABEL,
   EmptyState,
@@ -44,6 +46,26 @@ import { QuickAddCustomerModal, QuickAddLeadModal } from "@/components/admin/Qui
 export const Route = createFileRoute("/_authenticated/admin/")({
   component: Dashboard,
 });
+
+const DEFAULT_STATS = {
+  total: 0,
+  newCount: 0,
+  highPriority: 0,
+  pendingFollowUps: 0,
+  upcomingBookings: 0,
+  customers: 0,
+  careerApplications: 0,
+  assigned: 0,
+  contacted: 0,
+  qualified: 0,
+  followUp: 0,
+  proposal: 0,
+  won: 0,
+  lost: 0,
+  unassigned: 0,
+  publishedContent: 0,
+  draftContent: 0,
+};
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -64,35 +86,84 @@ function Dashboard() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "dashboard"],
-    queryFn: () => fetchDashboard({ data: undefined }),
+    queryFn: async () => {
+      try {
+        const res = await fetchDashboard({ data: undefined });
+        if (res && res.stats && typeof res.stats.total === "number") {
+          return res;
+        }
+      } catch (err) {
+        console.warn("[admin.dashboard] Server function unavailable, using direct Supabase client:", err);
+      }
+      return await fetchClientDashboard();
+    },
     retry: false,
   });
 
   const session = useQuery({
     queryKey: ["admin", "session"],
-    queryFn: () => fetchSession({ data: undefined }),
+    queryFn: async () => {
+      try {
+        const res = await fetchSession({ data: undefined });
+        if (res && res.userId) return res;
+      } catch {
+        // Fall back to client session
+      }
+      const { data: u } = await supabase.auth.getUser();
+      return {
+        userId: u?.user?.id,
+        email: u?.user?.email,
+        name: u?.user?.user_metadata?.full_name || u?.user?.email?.split("@")[0] || "Team",
+      };
+    },
     staleTime: 60_000,
   });
 
   const crmMetrics = useQuery({
     queryKey: ["admin", "crm-metrics"],
-    queryFn: () => fetchCrm({ data: undefined }),
+    queryFn: async () => {
+      try {
+        const res = await fetchCrm({ data: undefined });
+        if (res && typeof res.customers === "number") {
+          return res;
+        }
+      } catch (err) {
+        console.warn("[admin.crm-metrics] Server function unavailable, using direct Supabase client:", err);
+      }
+      return await fetchClientCrmMetrics();
+    },
     retry: false,
   });
 
   const unreadNotifs = useQuery({
     queryKey: ["admin", "notifications-unread-count"],
-    queryFn: () => fetchUnreadCount({ data: undefined }),
+    queryFn: async () => {
+      try {
+        const res = await fetchUnreadCount({ data: undefined });
+        if (res && typeof res.count === "number") return res;
+      } catch {
+        // Fall back to client count
+      }
+      const { count } = await supabase
+        .from("admin_notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("is_read", false);
+      return { count: count ?? 0 };
+    },
     staleTime: 10_000,
   });
 
   if (isLoading) return <Loading label="Loading live dashboard figures…" />;
-  if (isError || !data)
+  if (isError)
     return <ErrorState message="Could not load the dashboard." onRetry={() => refetch()} />;
 
-  const s = data.stats;
+  const s = data?.stats ?? DEFAULT_STATS;
   const crm = crmMetrics.data;
   const userName = session.data?.name || session.data?.email?.split("@")[0] || "Team";
+  const recentLeads = data?.recent ?? [];
+  const highPriorityLeads = data?.highPriority ?? [];
+  const followUpsTodayLeads = data?.followUpsToday ?? [];
+  const upcomingBookingsList = data?.upcomingBookings ?? [];
 
   return (
     <div className="space-y-8">
@@ -298,7 +369,7 @@ function Dashboard() {
             </Link>
           }
         >
-          <LeadList rows={data.recent} empty="No enquiries registered yet." />
+          <LeadList rows={recentLeads} empty="No enquiries registered yet." />
         </Panel>
 
         {/* High Priority Enquiries */}
@@ -315,7 +386,7 @@ function Dashboard() {
             </Link>
           }
         >
-          <LeadList rows={data.highPriority} empty="No open high-priority enquiries." />
+          <LeadList rows={highPriorityLeads} empty="No open high-priority enquiries." />
         </Panel>
 
         {/* Follow-ups Due Today */}
@@ -331,7 +402,7 @@ function Dashboard() {
             </Link>
           }
         >
-          <LeadList rows={data.followUpsToday} empty="Nothing due today." />
+          <LeadList rows={followUpsTodayLeads} empty="Nothing due today." />
         </Panel>
 
         {/* Upcoming Appointments */}
@@ -347,14 +418,14 @@ function Dashboard() {
             </Link>
           }
         >
-          {data.upcomingBookings.length === 0 ? (
+          {upcomingBookingsList.length === 0 ? (
             <EmptyState
               title="No upcoming appointments"
               body="Consultations booked through the website wizard appear here."
             />
           ) : (
             <ul className="divide-y divide-border/60">
-              {data.upcomingBookings.map((b: any) => (
+              {upcomingBookingsList.map((b: any) => (
                 <li key={b.id} className="flex items-center gap-3.5 py-3.5 transition hover:bg-secondary/30 rounded-xl px-2">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20">
                     <CalendarClock className="h-4 w-4" />

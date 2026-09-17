@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Building2, Search, Users } from "lucide-react";
 import { listCustomers } from "@/lib/crm.functions";
+import { fetchClientCustomers } from "@/lib/admin-client";
 import {
   DIVISION_LABEL,
   DIVISION_OPTIONS,
@@ -33,13 +34,21 @@ function CustomerList() {
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["admin", "customers", { search, division, status, sort, page }],
-    queryFn: () =>
-      fetchCustomers({ data: { search, division, status, sort, page, pageSize } } as any),
+    queryFn: async () => {
+      try {
+        const res = await fetchCustomers({ data: { search, division, status, sort, page, pageSize } } as any);
+        if (res && Array.isArray(res.rows)) return res;
+      } catch (err) {
+        console.warn("[admin.customers] ServerFn failed, fallback to client:", err);
+      }
+      return await fetchClientCustomers({ search, division, status, sort, page, pageSize });
+    },
     placeholderData: keepPreviousData,
     retry: false,
   });
 
-  const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  const totalCount = data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(totalCount / pageSize));
   const rows = data?.rows ?? [];
   const activeCount = rows.filter((c: any) => c.status === "active").length;
 
@@ -52,7 +61,7 @@ function CustomerList() {
         badge={
           data && (
             <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary border border-primary/20">
-              {data.total} clients
+              {totalCount} clients
             </span>
           )
         }

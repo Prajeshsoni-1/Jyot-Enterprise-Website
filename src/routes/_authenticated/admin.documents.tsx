@@ -20,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { getDocumentLink, listDocuments, registerDocument, reviewDocument } from "@/lib/crm.functions";
+import { fetchClientDocuments } from "@/lib/admin-client";
 import { uploadLeadFile } from "@/lib/lead-uploads";
 import {
   EmptyState,
@@ -38,15 +39,22 @@ export const Route = createFileRoute("/_authenticated/admin/documents")({
 
 const STATUSES = ["all", "uploaded", "under_review", "approved", "rejected"] as const;
 const LABEL: Record<string, string> = {
-  all: "All Documents",
+  all: "All Files",
   uploaded: "Uploaded",
   under_review: "Under Review",
   approved: "Approved",
   rejected: "Rejected",
 };
 
-function getFileIcon(name?: string) {
-  const ext = (name?.split(".").pop() || "").toLowerCase();
+function formatBytes(bytes: number | null | undefined): string {
+  if (!bytes || bytes <= 0) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function ModernDocIcon({ name }: { name: string }) {
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
   if (ext === "pdf") {
     return <FileText className="h-5 w-5 text-rose-500" />;
   }
@@ -92,11 +100,11 @@ function ModernDocStatusBadge({ value }: { value: string }) {
     label: value || "Uploaded",
   };
 
-  const current = styles[value] ?? fallback;
+  const current = styles[value] || fallback;
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[0.7rem] font-semibold ${current.bg}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${current.bg}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${current.dot}`} />
       {current.label}
@@ -108,11 +116,11 @@ function DocumentsPage() {
   const fetchDocs = useServerFn(listDocuments);
   const review = useServerFn(reviewDocument);
   const register = useServerFn(registerDocument);
-  const link = useServerFn(getDocumentLink);
+  const getLink = useServerFn(getDocumentLink);
   const queryClient = useQueryClient();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [status, setStatus] = useState<(typeof STATUSES)[number]>("all");
+  const [status, setStatus] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +131,15 @@ function DocumentsPage() {
   // Active status query
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["admin", "documents", "queue", { status, page }],
-    queryFn: () => fetchDocs({ data: { status, page, pageSize: 20 } } as any),
+    queryFn: async () => {
+      try {
+        const res = await fetchDocs({ data: { status, page, pageSize: 20 } } as any);
+        if (res && Array.isArray(res.rows)) return res;
+      } catch (err) {
+        console.warn("[admin.documents] ServerFn failed, fallback to client:", err);
+      }
+      return await fetchClientDocuments({ status, page, pageSize: 20 });
+    },
     placeholderData: keepPreviousData,
     retry: false,
   });
@@ -131,7 +147,15 @@ function DocumentsPage() {
   // Overview query to compute real stats across all documents
   const overviewQuery = useQuery({
     queryKey: ["admin", "documents", "overview-stats"],
-    queryFn: () => fetchDocs({ data: { status: "all", page: 1, pageSize: 500 } } as any),
+    queryFn: async () => {
+      try {
+        const res = await fetchDocs({ data: { status: "all", page: 1, pageSize: 500 } } as any);
+        if (res && Array.isArray(res.rows)) return res;
+      } catch (err) {
+        // fallback
+      }
+      return await fetchClientDocuments({ status: "all", page: 1, pageSize: 500 });
+    },
     staleTime: 30_000,
   });
 

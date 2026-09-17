@@ -15,6 +15,7 @@ import {
   X as XIcon,
 } from "lucide-react";
 import { listFollowUps, updateFollowUp } from "@/lib/crm.functions";
+import { fetchClientFollowUps, updateClientFollowUp } from "@/lib/admin-client";
 import {
   EmptyState,
   ErrorState,
@@ -47,13 +48,27 @@ function FollowUpsPage() {
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["admin", "followups", { scope, assignment, page }],
-    queryFn: () => fetchFollowUps({ data: { scope, assignment, page, pageSize: 20 } } as any),
+    queryFn: async () => {
+      try {
+        const res = await fetchFollowUps({ data: { scope, assignment, page, pageSize: 20 } } as any);
+        if (res && Array.isArray(res.rows)) return res;
+      } catch (err) {
+        console.warn("[admin.followups] ServerFn failed, fallback to client:", err);
+      }
+      return await fetchClientFollowUps({ scope, assignment, page, pageSize: 20 });
+    },
     placeholderData: keepPreviousData,
     retry: false,
   });
 
   const update = useMutation({
-    mutationFn: (input: Record<string, unknown>) => save({ data: input } as any),
+    mutationFn: async (input: Record<string, unknown>) => {
+      try {
+        return await save({ data: input } as any);
+      } catch {
+        return await updateClientFollowUp(input);
+      }
+    },
     onSuccess: () => {
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["admin"] });
@@ -61,7 +76,8 @@ function FollowUpsPage() {
     onError: (e: Error) => setError(e.message),
   });
 
-  const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  const totalCount = data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(totalCount / 20));
 
   return (
     <div className="space-y-6">
