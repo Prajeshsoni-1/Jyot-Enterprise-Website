@@ -109,7 +109,7 @@ function ModuleList() {
     queryFn: () => list({ data: { module: module as CmsModule, search, status } }),
   });
 
-  const rawRows = (query.data?.rows ?? []) as CmsRow[];
+  const rawRows = (Array.isArray(query.data?.rows) ? query.data.rows : []) as CmsRow[];
   const canEdit = query.data?.canEdit ?? false;
 
   // Applications query for job application counters

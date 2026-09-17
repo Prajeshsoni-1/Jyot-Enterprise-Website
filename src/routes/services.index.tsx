@@ -41,7 +41,9 @@ export const Route = createFileRoute("/services/")({
 });
 
 function ServicesIndex() {
-  const { overrides, subs: allSubs } = Route.useLoaderData();
+  const data = Route.useLoaderData();
+  const overrides = (data?.overrides && typeof data.overrides === "object") ? data.overrides : {};
+  const allSubs = Array.isArray(data?.subs) ? data.subs : [];
   return (
     <>
       <PageHero

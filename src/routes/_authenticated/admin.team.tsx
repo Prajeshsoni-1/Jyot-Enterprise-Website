@@ -186,7 +186,9 @@ function TeamManagementPage() {
     retry: false,
   });
 
-  const accounts: AccountItem[] = (data?.accounts as unknown as AccountItem[]) ?? [];
+  const accounts: AccountItem[] = Array.isArray(data?.accounts)
+    ? (data.accounts as unknown as AccountItem[])
+    : [];
   const isCallerOwner = Boolean(data?.isCallerOwner);
 
   // Filtered accounts

@@ -33,7 +33,8 @@ export const Route = createFileRoute("/downloads")({
 });
 
 function Downloads() {
-  const documents = Route.useLoaderData()?.documents ?? [];
+  const data = Route.useLoaderData();
+  const documents = Array.isArray(data?.documents) ? data.documents : [];
   return (
     <>
       <PageHero

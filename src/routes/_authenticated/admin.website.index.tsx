@@ -284,7 +284,8 @@ function WebsiteHome() {
             ] as const
           ).map(({ module: m, icon: Icon }) => {
             const def = CMS_MODULE_DEFS[m];
-            const rows = counts.data?.[m]?.rows ?? [];
+            const raw = counts.data?.[m]?.rows;
+            const rows = Array.isArray(raw) ? raw : [];
             const published = rows.filter((r) => r.status === "published").length;
             const drafts = rows.filter((r) => r.status === "draft").length;
 
@@ -359,7 +360,8 @@ function WebsiteHome() {
           {(() => {
             const m: CmsModule = "jobs";
             const def = CMS_MODULE_DEFS[m];
-            const rows = counts.data?.[m]?.rows ?? [];
+            const raw = counts.data?.[m]?.rows;
+            const rows = Array.isArray(raw) ? raw : [];
             const published = rows.filter((r) => r.status === "published").length;
             const drafts = rows.filter((r) => r.status === "draft").length;
             return (

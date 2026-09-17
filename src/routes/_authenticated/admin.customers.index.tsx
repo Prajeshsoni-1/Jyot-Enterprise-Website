@@ -49,7 +49,7 @@ function CustomerList() {
 
   const totalCount = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(totalCount / pageSize));
-  const rows = data?.rows ?? [];
+  const rows = Array.isArray(data?.rows) ? data.rows : [];
   const activeCount = rows.filter((c: any) => c.status === "active").length;
 
   return (

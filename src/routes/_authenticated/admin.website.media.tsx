@@ -235,8 +235,8 @@ function MediaPage() {
     setTimeout(() => setCopiedUrl(null), 2000);
   }
 
-  const imageRows = imageQuery.data?.rows ?? [];
-  const docRows = (docQuery.data?.rows ?? []) as CmsRow[];
+  const imageRows = Array.isArray(imageQuery.data?.rows) ? imageQuery.data.rows : [];
+  const docRows = (Array.isArray(docQuery.data?.rows) ? docQuery.data.rows : []) as CmsRow[];
   const canEdit = imageQuery.data?.canEdit ?? docQuery.data?.canEdit ?? true;
 
   const filteredDocs = docRows.filter((doc) => {

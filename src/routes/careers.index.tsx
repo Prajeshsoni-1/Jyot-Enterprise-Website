@@ -105,7 +105,7 @@ function JobRow({ job }: { job: Job }) {
 
 function Careers() {
   const loaderData = Route.useLoaderData();
-  const jobs = (loaderData?.jobs ?? []) as Job[];
+  const jobs = (Array.isArray(loaderData?.jobs) ? loaderData.jobs : []) as Job[];
   const page = loaderData?.page as PageContent;
 
   const jobsList = jobs.filter((j) =>

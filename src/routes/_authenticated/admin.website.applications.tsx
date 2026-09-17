@@ -94,7 +94,7 @@ function ApplicationsPage() {
     }
   }
 
-  const rawRows = (query.data?.rows ?? []) as Row[];
+  const rawRows = (Array.isArray(query.data?.rows) ? query.data.rows : []) as Row[];
 
   // Dynamic roles list for filter
   const distinctRoles = useMemo(() => {

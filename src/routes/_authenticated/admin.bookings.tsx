@@ -117,7 +117,7 @@ function BookingsPage() {
   const pages = Math.max(1, Math.ceil(totalCount / 20));
 
   // Real counts from current page rows for quick pulse
-  const rows = list.data?.rows ?? [];
+  const rows = Array.isArray(list.data?.rows) ? list.data.rows : [];
   const pendingCount = rows.filter((b: any) => b.status === "pending").length;
   const confirmedCount = rows.filter((b: any) => b.status === "confirmed").length;
   const completedCount = rows.filter((b: any) => b.status === "completed").length;

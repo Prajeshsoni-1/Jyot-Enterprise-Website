@@ -49,7 +49,8 @@ export const Route = createFileRoute("/blogs/")({
 
 function Blogs() {
   const [category, setCategory] = useState<string>("All");
-  const { posts: allPosts } = Route.useLoaderData();
+  const data = Route.useLoaderData();
+  const allPosts = Array.isArray(data?.posts) ? data.posts : [];
   const posts = category === "All" ? allPosts : allPosts.filter((p) => p.category === category);
 
   return (

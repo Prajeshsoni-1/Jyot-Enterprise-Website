@@ -86,7 +86,8 @@ function Thumb({
 }
 
 function Portfolio() {
-  const { projects } = Route.useLoaderData();
+  const data = Route.useLoaderData();
+  const projects = Array.isArray(data?.projects) ? data.projects : [];
   const [selectedPractice, setSelectedPractice] = useState("all");
 
   const practices = ["all", "IT", "Financial", "Legal", "Engineering"];

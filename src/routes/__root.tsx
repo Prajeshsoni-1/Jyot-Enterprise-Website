@@ -25,6 +25,7 @@ import { Header } from "../components/site/Header";
 import { Footer } from "../components/site/Footer";
 import { FloatingTools } from "../components/site/FloatingTools";
 import { getSiteSettings } from "../lib/settings.functions";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DEFAULT_SITE_SETTINGS,
   SiteSettingsContext,
@@ -99,6 +100,18 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   loader: async () => {
+    if (typeof window !== "undefined") {
+      try {
+        const { data: row } = await supabase
+          .from("cms_settings" as any)
+          .select("value")
+          .eq("key", "site")
+          .maybeSingle();
+        return { settings: mergeSettings(((row as any)?.value ?? null) as Partial<SiteSettings> | null) };
+      } catch {
+        return { settings: DEFAULT_SITE_SETTINGS };
+      }
+    }
     try {
       const res = await getSiteSettings();
       return { settings: mergeSettings(res) };

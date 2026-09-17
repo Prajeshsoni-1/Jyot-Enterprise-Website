@@ -12,7 +12,7 @@ import {
   getPublishedContent,
 } from "@/lib/cms.functions";
 import { getResourceBySlug, resourceFileList } from "@/lib/resource.functions";
-import type { CmsModule, CmsRow } from "@/lib/cms-schema";
+import { CMS_MODULE_DEFS, type CmsModule, type CmsRow } from "@/lib/cms-schema";
 import {
   cmsDownloads,
   jobExtras,
@@ -43,20 +43,44 @@ import { JOBS } from "@/data/careers";
 import { PRODUCTS, TESTIMONIALS } from "@/data/site";
 
 async function rows(module: CmsModule): Promise<CmsRow[]> {
+  const table = (CMS_MODULE_DEFS[module]?.table ?? `cms_${module}`) as any;
+
+  // In browser, query Supabase directly using the real table
+  if (typeof window !== "undefined") {
+    try {
+      const { data, error } = await supabase
+        .from(table)
+        .select("*")
+        .eq("status", "published")
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (!error && Array.isArray(data)) {
+        return data as unknown as CmsRow[];
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // During SSR or as server fallback, call server function
   try {
     const res = await getPublishedContent({ data: { module } });
-    if (Array.isArray(res) && res.length > 0) return res;
-    if (res && Array.isArray((res as any).rows) && (res as any).rows.length > 0) return (res as any).rows;
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray((res as any).rows)) return (res as any).rows;
   } catch {
     // ignore
   }
 
+  // Final fallback to direct client query
   try {
     const { data, error } = await supabase
-      .from("cms_content")
+      .from(table)
       .select("*")
-      .eq("module", module)
-      .eq("status", "published");
+      .eq("status", "published")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false })
+      .limit(500);
     if (!error && Array.isArray(data)) {
       return data as unknown as CmsRow[];
     }
@@ -76,6 +100,21 @@ export async function loadBlogPosts() {
 }
 
 export async function loadBlogPost(slug: string, preview = false): Promise<BlogPost | null> {
+  if (typeof window !== "undefined") {
+    try {
+      const { data, error } = await supabase
+        .from("cms_posts" as any)
+        .select("*")
+        .eq("slug", slug)
+        .eq("status", "published")
+        .maybeSingle();
+      if (!error && data) {
+        return toBlogPost(data as unknown as CmsRow);
+      }
+    } catch {
+      // ignore
+    }
+  }
   try {
     const row = await getBlogPost({ data: { slug, preview } });
     if (row) {
@@ -97,6 +136,21 @@ export async function loadProjects() {
 }
 
 export async function loadProject(slug: string, preview = false): Promise<Project | null> {
+  if (typeof window !== "undefined") {
+    try {
+      const { data, error } = await supabase
+        .from("cms_projects" as any)
+        .select("*")
+        .eq("slug", slug)
+        .eq("status", "published")
+        .maybeSingle();
+      if (!error && data) {
+        return toProject(data as unknown as CmsRow);
+      }
+    } catch {
+      // ignore
+    }
+  }
   try {
     const row = await getPortfolioProject({ data: { slug, preview } });
     if (row) {

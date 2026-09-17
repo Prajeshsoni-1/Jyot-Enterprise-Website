@@ -33,7 +33,8 @@ export const Route = createFileRoute("/resources/")({
 });
 
 function Resources() {
-  const { library } = Route.useLoaderData();
+  const data = Route.useLoaderData();
+  const library = Array.isArray(data?.library) ? data.library : [];
   return (
     <>
       <PageHero

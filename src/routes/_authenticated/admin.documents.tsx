@@ -159,7 +159,7 @@ function DocumentsPage() {
     staleTime: 30_000,
   });
 
-  const allRows = overviewQuery.data?.rows ?? [];
+  const allRows = Array.isArray(overviewQuery.data?.rows) ? overviewQuery.data.rows : [];
   const statTotal = overviewQuery.data?.total ?? data?.total ?? 0;
   const statApproved = allRows.filter((d: any) => d.status === "approved").length;
   const statUnderReview = allRows.filter(

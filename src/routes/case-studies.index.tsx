@@ -32,7 +32,8 @@ export const Route = createFileRoute("/case-studies/")({
 });
 
 function CaseStudiesIndex() {
-  const { studies } = Route.useLoaderData();
+  const data = Route.useLoaderData();
+  const studies = Array.isArray(data?.studies) ? data.studies : [];
   return (
     <>
       <PageHero

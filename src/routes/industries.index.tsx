@@ -33,7 +33,8 @@ export const Route = createFileRoute("/industries/")({
 });
 
 function IndustriesIndex() {
-  const { industries } = Route.useLoaderData();
+  const data = Route.useLoaderData();
+  const industries = Array.isArray(data?.industries) ? data.industries : [];
   return (
     <>
       <PageHero
