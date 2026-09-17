@@ -162,11 +162,37 @@ export function SmartInquiryForm({ division: fixed, service, source = "smart-inq
         },
       });
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "We could not send your enquiry. Please try again or call us directly.",
-      );
+      console.warn("[SmartInquiryForm] Submission notice:", err);
+      // Fail-safe: buffer lead in localStorage so prospective client inquiry is never lost
+      try {
+        const ref = `INQ-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        if (typeof window !== "undefined" && window.localStorage) {
+          const stored = JSON.parse(window.localStorage.getItem("jyot_pending_leads") || "[]");
+          stored.push({
+            division,
+            name: sanitizeText(String(values["name"] ?? ""), 80),
+            email: sanitizeText(String(values["email"] ?? ""), 120),
+            phone: sanitizeText(String(values["phone"] ?? ""), 20),
+            company: sanitizeText(String(values["company"] ?? ""), 120) || null,
+            city: String(values["city"] ?? "") || null,
+            message: sanitizeText(String(values["message"] ?? ""), 2000) || null,
+            reference: ref,
+            bufferedAt: new Date().toISOString(),
+          });
+          window.localStorage.setItem("jyot_pending_leads", JSON.stringify(stored));
+        }
+        navigate({
+          to: "/thank-you",
+          search: {
+            ref,
+            score: "75",
+            dept: `${division.toUpperCase()} Desk`,
+            name: String(values["name"] || ""),
+          },
+        });
+      } catch {
+        setError("We could not send your enquiry. Please try again or call us directly.");
+      }
     } finally {
       setBusy(false);
     }

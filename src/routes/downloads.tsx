@@ -48,7 +48,7 @@ function Downloads() {
             <SectionHeading eyebrow="Documents" title="Latest documents" />
             <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {documents.map((d) => {
-                const targetUrl = d.fileUrl || `/api/downloads/${d.slug}.pdf`;
+                const targetUrl = d.fileUrl || `/downloads/${d.slug}.pdf`;
                 const filename = `${d.slug}.pdf`;
                 return (
                   <a

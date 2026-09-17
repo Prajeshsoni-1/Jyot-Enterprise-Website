@@ -270,27 +270,29 @@ export const createBooking = createServerFn({ method: "POST" })
             dateStyle: "medium",
             timeStyle: "short",
           });
-          void triggerAdminNotification({
-            type: "booking",
-            title: "New consultant booking received",
-            message: `${data.name} booked a ${data.meetingType || "consultation"} session on ${formattedTime}.`,
-            entity_type: "booking",
-            entity_id: insertedBooking?.id ? String(insertedBooking.id) : null,
-            entity_reference: reference,
-            data: {
-              name: data.name,
-              email,
-              phone: data.phone,
-              company: data.company,
-              division: data.division,
-              service: data.service,
-              meetingType: data.meetingType,
-              slotAt: instant.toISOString(),
-              reference,
-            },
-          }).catch((err) =>
-            console.error("[createBooking] Real-time admin notification error:", err),
-          );
+          try {
+            await triggerAdminNotification({
+              type: "booking",
+              title: "New consultant booking received",
+              message: `${data.name} booked a ${data.meetingType || "consultation"} session on ${formattedTime}.`,
+              entity_type: "booking",
+              entity_id: insertedBooking?.id ? String(insertedBooking.id) : null,
+              entity_reference: reference,
+              data: {
+                name: data.name,
+                email,
+                phone: data.phone,
+                company: data.company,
+                division: data.division,
+                service: data.service,
+                meetingType: data.meetingType,
+                slotAt: instant.toISOString(),
+                reference,
+              },
+            });
+          } catch (err) {
+            console.error("[createBooking] Real-time admin notification error:", err);
+          }
         } catch (adminNotifErr) {
           console.error("[createBooking] Could not trigger admin notification:", adminNotifErr);
         }

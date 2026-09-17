@@ -32,7 +32,7 @@ import {
 import { CMS_MODULES, CMS_MODULE_DEFS, type CmsModule } from "@/lib/cms-schema";
 import { cmsHistory, cmsImport, cmsList } from "@/lib/cms.functions";
 import { staticRecords } from "@/lib/cms-import";
-import { EmptyState, Loading, Panel, formatDate } from "@/components/admin/ui";
+import { EmptyState, Loading, Panel, PageHeader, formatDate } from "@/components/admin/ui";
 import { pageMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/_authenticated/admin/website/")({
@@ -130,29 +130,30 @@ function WebsiteHome() {
   const aboutRow = pageRows.find((r) => r.slug === "about");
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       {/* Top Banner & Header */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="flex items-center gap-2.5 font-display text-2xl font-extrabold text-ink">
-            <PanelsTopLeft className="h-6 w-6 text-primary" /> Website Management Hub
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Simple, non-technical control of all public website content, business offerings,
-            branding, and SEO.
-          </p>
-        </div>
-        {canEdit ? (
-          <button
-            onClick={importAll}
-            disabled={importing}
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-xs font-semibold text-ink shadow-xs hover:bg-secondary disabled:opacity-60 transition"
-          >
-            <Download className="h-3.5 w-3.5 text-primary" />
-            {importing ? "Importing…" : "Seed / Import Built-in Content"}
-          </button>
-        ) : null}
-      </header>
+      <PageHeader
+        title="Website Management Hub"
+        description="Unified enterprise control for public website offerings, corporate pages, SEO metadata, and brand identity."
+        badge={
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+            <PanelsTopLeft className="h-3.5 w-3.5" />
+            CMS Engine
+          </span>
+        }
+        actions={
+          canEdit ? (
+            <button
+              onClick={importAll}
+              disabled={importing}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold text-ink shadow-2xs hover:bg-secondary disabled:opacity-60 transition"
+            >
+              <Download className="h-3.5 w-3.5 text-primary" />
+              {importing ? "Importing…" : "Seed / Import Built-in Content"}
+            </button>
+          ) : undefined
+        }
+      />
 
       {message ? (
         <p className="rounded-2xl bg-primary/10 border border-primary/20 px-4 py-3 text-sm font-semibold text-primary">

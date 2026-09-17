@@ -6,6 +6,7 @@ import { AlertCircle, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react
 import { SERVICES, type ServiceKey } from "@/data/site";
 import { SUBS_BY_PARENT } from "@/data/catalog";
 import { createBooking, getAvailability } from "@/lib/booking.functions";
+import { fetchAvailability, submitBookingRequest } from "@/lib/booking-client";
 import {
   MEETING_TYPES,
   bookingWindow,
@@ -63,7 +64,7 @@ export function BookingWizard({ defaultDivision }: { defaultDivision?: ServiceKe
     let cancelled = false;
     setSlotsLoading(true);
     setSlotsError(null);
-    availability({ data: { date } })
+    fetchAvailability(date, availability)
       .then((res) => {
         if (cancelled) return;
         setSlots(res.slots as Slot[]);
@@ -98,8 +99,8 @@ export function BookingWizard({ defaultDivision }: { defaultDivision?: ServiceKe
     setSubmitting(true);
     setError(null);
     try {
-      const res = await book({
-        data: {
+      const res = await submitBookingRequest(
+        {
           division: division as ServiceKey,
           service: service || undefined,
           date,
@@ -113,7 +114,8 @@ export function BookingWizard({ defaultDivision }: { defaultDivision?: ServiceKe
           message: details.message.trim() || undefined,
           honeypot: honeypot || undefined,
         },
-      });
+        book,
+      );
       setReference(res.reference);
       setStep(4);
       trackEvent("booking_created", { division, service, meeting_type: meetingType });
@@ -127,8 +129,7 @@ export function BookingWizard({ defaultDivision }: { defaultDivision?: ServiceKe
       if (/taken|passed/i.test(message)) {
         setTime("");
         setStep(2);
-        setDate((d) => d); // triggers nothing; refresh below
-        availability({ data: { date } })
+        fetchAvailability(date, availability)
           .then((r) => setSlots(r.slots as Slot[]))
           .catch(() => undefined);
       }

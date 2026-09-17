@@ -131,49 +131,53 @@ export const submitEnquiry = createServerFn({ method: "POST" })
             positionType === "internship" || roleTitle.toLowerCase().includes("internship");
 
           if (isCareer) {
-            void triggerAdminNotification({
-              type: "job_application",
-              title: isInternship
-                ? "New internship application received"
-                : "New job application received",
-              message: `${data.name} applied for ${roleTitle} (${isInternship ? "Internship" : "Job"}).`,
-              entity_type: "job_application",
-              entity_id: insertedLead?.id ? String(insertedLead.id) : null,
-              entity_reference: reference,
-              data: {
-                name: data.name,
-                email: data.email,
-                phone: data.phone,
-                jobTitle: roleTitle,
-                positionType: isInternship ? "internship" : "job",
-                reference,
-              },
-            }).catch((err) =>
-              console.error("[submitEnquiry] Real-time job application notification error:", err),
-            );
+            try {
+              await triggerAdminNotification({
+                type: "job_application",
+                title: isInternship
+                  ? "New internship application received"
+                  : "New job application received",
+                message: `${data.name} applied for ${roleTitle} (${isInternship ? "Internship" : "Job"}).`,
+                entity_type: "job_application",
+                entity_id: insertedLead?.id ? String(insertedLead.id) : null,
+                entity_reference: reference,
+                data: {
+                  name: data.name,
+                  email: data.email,
+                  phone: data.phone,
+                  jobTitle: roleTitle,
+                  positionType: isInternship ? "internship" : "job",
+                  reference,
+                },
+              });
+            } catch (err) {
+              console.error("[submitEnquiry] Real-time job application notification error:", err);
+            }
           } else {
             const serviceName =
               data.service ||
               (data.division ? `${data.division.toUpperCase()} Services` : "General Enquiry");
-            void triggerAdminNotification({
-              type: "enquiry",
-              title: "New enquiry received",
-              message: `${data.name} submitted an enquiry for ${serviceName}.`,
-              entity_type: "lead",
-              entity_id: insertedLead?.id ? String(insertedLead.id) : null,
-              entity_reference: reference,
-              data: {
-                name: data.name,
-                email: data.email,
-                phone: data.phone,
-                company: data.company,
-                service: serviceName,
-                division: data.division,
-                reference,
-              },
-            }).catch((err) =>
-              console.error("[submitEnquiry] Real-time enquiry notification error:", err),
-            );
+            try {
+              await triggerAdminNotification({
+                type: "enquiry",
+                title: "New enquiry received",
+                message: `${data.name} submitted an enquiry for ${serviceName}.`,
+                entity_type: "lead",
+                entity_id: insertedLead?.id ? String(insertedLead.id) : null,
+                entity_reference: reference,
+                data: {
+                  name: data.name,
+                  email: data.email,
+                  phone: data.phone,
+                  company: data.company,
+                  service: serviceName,
+                  division: data.division,
+                  reference,
+                },
+              });
+            } catch (err) {
+              console.error("[submitEnquiry] Real-time enquiry notification error:", err);
+            }
           }
         } catch (adminNotifErr) {
           console.error("[submitEnquiry] Could not trigger admin notification:", adminNotifErr);

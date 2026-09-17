@@ -13,8 +13,15 @@ import {
 } from "@/data/financial";
 
 function publicClient() {
-  const url = process.env["SUPABASE_URL"]!;
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"]!;
+  const url =
+    process.env["SUPABASE_URL"] ||
+    process.env["VITE_SUPABASE_URL"] ||
+    "https://xmveofqeunsqzyxhakyj.supabase.co";
+  const key =
+    process.env["SUPABASE_PUBLISHABLE_KEY"] ??
+    process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ??
+    process.env["SUPABASE_ANON_KEY"] ??
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtdmVvZnFldW5zcXp5eGhha3lqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NjI4MjMsImV4cCI6MjEwNDQzODgyM30.krXHwtaUwy45nyH86I6Tl8pz7dEhQIdcIlVO027-BnI";
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {
@@ -30,11 +37,14 @@ function publicClient() {
 }
 
 function supabaseAdmin(): SupabaseClient {
-  const url = process.env["SUPABASE_URL"]!;
+  const url =
+    process.env["SUPABASE_URL"] ||
+    process.env["VITE_SUPABASE_URL"] ||
+    "https://xmveofqeunsqzyxhakyj.supabase.co";
   const key =
     process.env["SUPABASE_SERVICE_ROLE_KEY"] ??
     process.env["SUPABASE_SERVICE_KEY"] ??
-    process.env["SUPABASE_ANON_KEY"]!;
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtdmVvZnFldW5zcXp5eGhha3lqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODg2MjgyMywiZXhwIjoyMTA0NDM4ODgyM30.n5JMj0UygWqi8j0ONh_WJweWC3V-5O1-F-ue5Kh6VPo";
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });

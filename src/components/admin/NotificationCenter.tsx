@@ -50,6 +50,7 @@ function getNotificationVisuals(type: AdminNotification["type"]) {
         label: "Career",
       };
     case "enquiry":
+    case "new_enquiry":
     case "request":
     default:
       return {

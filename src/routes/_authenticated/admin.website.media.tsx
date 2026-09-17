@@ -572,7 +572,7 @@ function MediaPage() {
             const data: any = doc.data ?? {};
             const storagePath = (doc.file_path || data.storage_path || "") as string;
             const fileSize = (data.file_size || doc.file_size) as number | undefined;
-            const fileUrl = (doc.file_url || (storagePath ? `https://xmveofqeunsqzyxhakyj.supabase.co/storage/v1/object/public/jyot-enterprise/${storagePath}` : `/api/downloads/${doc.slug}.pdf`)) as string;
+            const fileUrl = (doc.file_url || (storagePath ? `https://xmveofqeunsqzyxhakyj.supabase.co/storage/v1/object/public/jyot-enterprise/${storagePath}` : `/downloads/${doc.slug}.pdf`)) as string;
             const isPublished = doc.status === "published";
 
             return (

@@ -46,7 +46,15 @@ import {
   type AccountStatus,
   type PermissionCategory,
 } from "@/lib/permissions";
-import { Panel, Loading, ErrorState, formatDate, ConfirmModal } from "@/components/admin/ui";
+import {
+  Panel,
+  Loading,
+  ErrorState,
+  formatDate,
+  ConfirmModal,
+  PageHeader,
+  StatCard,
+} from "@/components/admin/ui";
 
 export const Route = createFileRoute("/_authenticated/admin/team")({
   component: TeamManagementPage,
@@ -305,30 +313,25 @@ function TeamManagementPage() {
   return (
     <div className="space-y-6">
       {/* Top Banner & Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold tracking-tight text-ink">
-              Team & User Management
-            </h1>
-            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
-              Enterprise RBAC
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage admin users, 4-tier role hierarchy (Owner, Admin, Manager, Staff), and granular
-            module permissions.
-          </p>
-        </div>
-
-        <button
-          onClick={() => setIsCreateOpen(true)}
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition shrink-0"
-        >
-          <UserPlus className="h-4 w-4" />
-          Add User
-        </button>
-      </div>
+      <PageHeader
+        title="Team & User Management"
+        description="Manage admin users, 4-tier role hierarchy (Owner, Admin, Manager, Staff), and granular module permissions."
+        badge={
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Enterprise RBAC
+          </span>
+        }
+        actions={
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground shadow-2xs hover:bg-primary/90 transition shrink-0"
+          >
+            <UserPlus className="h-4 w-4" />
+            Add User
+          </button>
+        }
+      />
 
       {/* Feedback Banner */}
       {feedback ? (
@@ -358,33 +361,31 @@ function TeamManagementPage() {
       ) : null}
 
       {/* Metrics Bar */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-background p-4 shadow-2xs">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
-            Total Users
-          </p>
-          <p className="mt-1.5 text-2xl font-extrabold text-ink">{accounts.length}</p>
-        </div>
-        <div className="rounded-2xl border border-border bg-background p-4 shadow-2xs">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
-            Active Accounts
-          </p>
-          <p className="mt-1.5 text-2xl font-extrabold text-emerald-600">
-            {accounts.filter((a) => a.status === "active").length}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-border bg-background p-4 shadow-2xs">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
-            Administrators
-          </p>
-          <p className="mt-1.5 text-2xl font-extrabold text-primary">{data.adminCount}</p>
-        </div>
-        <div className="rounded-2xl border border-border bg-background p-4 shadow-2xs">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted-foreground">
-            System Owners
-          </p>
-          <p className="mt-1.5 text-2xl font-extrabold text-amber-600">{data.ownerCount}</p>
-        </div>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard
+          label="Total Users"
+          value={accounts.length}
+          hint="Registered admin accounts"
+          icon={<Users className="h-5 w-5 text-primary" />}
+        />
+        <StatCard
+          label="Active Accounts"
+          value={accounts.filter((a) => a.status === "active").length}
+          hint="Operational status active"
+          icon={<UserCheck className="h-5 w-5 text-emerald-600" />}
+        />
+        <StatCard
+          label="Administrators"
+          value={data.adminCount}
+          hint="Admin role privileges"
+          icon={<ShieldCheck className="h-5 w-5 text-primary" />}
+        />
+        <StatCard
+          label="System Owners"
+          value={data.ownerCount}
+          hint="Full enterprise sovereignty"
+          icon={<ShieldAlert className="h-5 w-5 text-amber-600" />}
+        />
       </div>
 
       {/* Filter and Search Bar */}

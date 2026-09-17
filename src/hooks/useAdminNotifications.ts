@@ -72,7 +72,12 @@ export function getNotificationRoute(notif: AdminNotification): string {
     }
     return "/admin/website/applications";
   }
-  if (notif.entity_type === "lead" || notif.type === "enquiry" || notif.type === "request") {
+  if (
+    notif.entity_type === "lead" ||
+    notif.type === "enquiry" ||
+    notif.type === "new_enquiry" ||
+    notif.type === "request"
+  ) {
     if (notif.entity_id) return `/admin/enquiries/${notif.entity_id}`;
     if (notif.entity_reference) return `/admin/enquiries?q=${encodeURIComponent(notif.entity_reference)}`;
     return "/admin/enquiries";
@@ -151,7 +156,17 @@ export function useAdminNotifications(options?: {
     supabase.auth.getSession().then(({ data }) => {
       currentUserIdRef.current = data?.session?.user?.id ?? null;
     });
-  }, []);
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      currentUserIdRef.current = session?.user?.id ?? null;
+      queryClient.invalidateQueries({ queryKey: ["admin", "notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "notifications-unread-count"] });
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [queryClient]);
 
   useEffect(() => {
     if (!enableRealtime || typeof window === "undefined") return;
@@ -170,20 +185,24 @@ export function useAdminNotifications(options?: {
           const rec = (payload.new || payload.old) as AdminNotification | undefined;
           if (!rec) return;
 
-          // Only process notifications intended for this user or broadcast
+          // Only process notifications intended for this user or broadcast (null)
           const uid = currentUserIdRef.current;
           if (rec.recipient_user_id && uid && rec.recipient_user_id !== uid) {
             return;
           }
 
-          // Invalidate caches instantly
-          queryClient.invalidateQueries({ queryKey: ["admin", "notifications"] });
-          queryClient.invalidateQueries({ queryKey: ["admin", "notifications-unread-count"] });
-
           // If new notification arrived, show toast and play chime
           if (payload.eventType === "INSERT") {
             const notif = payload.new as AdminNotification;
             playNotificationChime();
+
+            // Optimistically update unread count immediately
+            queryClient.setQueryData(
+              ["admin", "notifications-unread-count"],
+              (old: { count: number } | undefined) => ({
+                count: (old?.count ?? 0) + 1,
+              }),
+            );
 
             const targetUrl = getNotificationRoute(notif);
             toast(notif.title, {
@@ -197,9 +216,17 @@ export function useAdminNotifications(options?: {
               duration: 6000,
             });
           }
+
+          // Invalidate caches to sync full list and unread count from server
+          queryClient.invalidateQueries({ queryKey: ["admin", "notifications"] });
+          queryClient.invalidateQueries({ queryKey: ["admin", "notifications-unread-count"] });
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR") {
+          console.warn("[useAdminNotifications] Realtime channel error, will retry on reconnection.");
+        }
+      });
 
     return () => {
       void supabase.removeChannel(channel);

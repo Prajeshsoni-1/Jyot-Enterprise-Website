@@ -1,8 +1,11 @@
--- ==============================================================================
--- Migration: 20260912130000_admin_notifications.sql
--- Description: Real-time Admin Notification System for Jyot Enterprise Suite
--- ==============================================================================
+-- =============================================================================
+-- JYOT ENTERPRISE — COMPLETE ADMIN NOTIFICATION SYSTEM MIGRATION
+-- =============================================================================
+-- Project: https://supabase.com/dashboard/project/xmveofqeunsqzyxhakyj/sql/new
+-- Instructions: Run this entire SQL script in your Supabase SQL Editor.
+-- =============================================================================
 
+-- 1. CREATE ADMIN NOTIFICATIONS TABLE -----------------------------------------
 CREATE TABLE IF NOT EXISTS public.admin_notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   recipient_user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -21,7 +24,7 @@ CREATE TABLE IF NOT EXISTS public.admin_notifications (
 -- Ensure full replica identity so updates and deletes broadcast complete row states
 ALTER TABLE public.admin_notifications REPLICA IDENTITY FULL;
 
--- Indexes for performance
+-- 2. CREATE INDEXES FOR FAST QUERYING -----------------------------------------
 CREATE INDEX IF NOT EXISTS idx_admin_notifications_recipient
   ON public.admin_notifications (recipient_user_id, is_read, created_at DESC);
 
@@ -34,13 +37,13 @@ CREATE INDEX IF NOT EXISTS idx_admin_notifications_entity
 CREATE INDEX IF NOT EXISTS idx_admin_notifications_created
   ON public.admin_notifications (created_at DESC);
 
--- Enable Row Level Security (RLS)
+-- 3. ENABLE ROW LEVEL SECURITY (RLS) ------------------------------------------
 ALTER TABLE public.admin_notifications ENABLE ROW LEVEL SECURITY;
 
 GRANT ALL ON public.admin_notifications TO service_role;
 GRANT SELECT, UPDATE, INSERT, DELETE ON public.admin_notifications TO authenticated;
 
--- 1. SELECT policy: Team members can read their own notifications or broadcasts
+-- Policy A: SELECT - Authenticated team members can read their assigned notifications or broadcast notifications
 DROP POLICY IF EXISTS "team_can_select_notifications" ON public.admin_notifications;
 CREATE POLICY "team_can_select_notifications" ON public.admin_notifications
   FOR SELECT
@@ -59,7 +62,7 @@ CREATE POLICY "team_can_select_notifications" ON public.admin_notifications
     )
   );
 
--- 2. UPDATE policy: Team members can update (mark as read) their notifications
+-- Policy B: UPDATE - Team members can mark notifications as read
 DROP POLICY IF EXISTS "team_can_update_notifications" ON public.admin_notifications;
 CREATE POLICY "team_can_update_notifications" ON public.admin_notifications
   FOR UPDATE
@@ -82,7 +85,7 @@ CREATE POLICY "team_can_update_notifications" ON public.admin_notifications
     OR recipient_user_id IS NULL
   );
 
--- 3. DELETE policy: Team members can delete their own notifications
+-- Policy C: DELETE - Team members can delete their notifications
 DROP POLICY IF EXISTS "team_can_delete_notifications" ON public.admin_notifications;
 CREATE POLICY "team_can_delete_notifications" ON public.admin_notifications
   FOR DELETE
@@ -101,7 +104,7 @@ CREATE POLICY "team_can_delete_notifications" ON public.admin_notifications
     )
   );
 
--- 4. INSERT policy: Service role and authenticated team members can insert
+-- Policy D: INSERT - Service role or authenticated team members can insert
 DROP POLICY IF EXISTS "team_can_insert_notifications" ON public.admin_notifications;
 CREATE POLICY "team_can_insert_notifications" ON public.admin_notifications
   FOR INSERT
@@ -114,7 +117,7 @@ CREATE POLICY "team_can_insert_notifications" ON public.admin_notifications
     OR public.is_team(auth.uid())
   );
 
--- Enable Supabase Realtime for admin_notifications
+-- 4. ENABLE REALTIME PUBLICATION ----------------------------------------------
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -129,7 +132,7 @@ EXCEPTION
   WHEN undefined_object THEN NULL;
 END $$;
 
--- Automatic trigger for leads (enquiries & applications)
+-- 5. AUTOMATIC DATABASE TRIGGERS FOR LEADS (ENQUIRIES & APPLICATIONS) ---------
 CREATE OR REPLACE FUNCTION public.trg_notify_new_lead()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -154,6 +157,8 @@ BEGIN
     v_message := 'A new enquiry has been received from ' || COALESCE(NEW.name, 'a prospective client') || ' for ' || v_service || '.';
   END IF;
 
+  -- Insert broadcast notification for all team members (recipient_user_id IS NULL)
+  -- Deduplicate within 1 minute
   IF NOT EXISTS (
     SELECT 1 FROM public.admin_notifications
     WHERE entity_type = v_entity_type
@@ -203,7 +208,7 @@ CREATE TRIGGER trg_lead_insert_notification
   FOR EACH ROW
   EXECUTE FUNCTION public.trg_notify_new_lead();
 
--- Automatic trigger for bookings
+-- 6. AUTOMATIC DATABASE TRIGGER FOR CONSULTANT BOOKINGS -----------------------
 CREATE OR REPLACE FUNCTION public.trg_notify_new_booking()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -263,3 +268,16 @@ CREATE TRIGGER trg_booking_insert_notification
   AFTER INSERT ON public.bookings
   FOR EACH ROW
   EXECUTE FUNCTION public.trg_notify_new_booking();
+
+-- 7. ENSURE PUBLIC LEADS RLS ALLOWS VISITOR SUBMISSIONS -----------------------
+GRANT INSERT ON public.leads TO anon, authenticated;
+
+DROP POLICY IF EXISTS "Public can insert leads" ON public.leads;
+DROP POLICY IF EXISTS "Anyone can insert leads" ON public.leads;
+DROP POLICY IF EXISTS "Visitors can submit leads" ON public.leads;
+
+CREATE POLICY "Public can insert leads"
+ON public.leads
+FOR INSERT
+TO anon, authenticated
+WITH CHECK (true);

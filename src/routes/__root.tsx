@@ -13,7 +13,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { ANALYTICS_IDS, initAnalytics, trackPageView } from "../lib/analytics";
+import { ANALYTICS_IDS, initAnalytics, trackPageView, isPublicPath } from "../lib/analytics";
 import {
   SITE_NAME,
   jsonLd,
@@ -170,16 +170,16 @@ function RootComponent() {
   const settings = (Route.useLoaderData()?.settings ?? DEFAULT_SITE_SETTINGS) as SiteSettings;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  useEffect(() => {
-    initAnalytics();
-  }, []);
-
-  useEffect(() => {
-    trackPageView(pathname);
-  }, [pathname]);
-
   // Admin and sign-in screens run without the public marketing chrome.
-  const isConsole = pathname.startsWith("/admin") || pathname.startsWith("/auth");
+  const isConsole = !isPublicPath(pathname);
+
+  useEffect(() => {
+    // Only track real visitors on public website routes; strictly exclude /admin/* and /auth/*
+    if (isPublicPath(pathname)) {
+      initAnalytics(settings?.analytics?.ga4);
+      trackPageView(pathname);
+    }
+  }, [pathname, settings?.analytics?.ga4]);
 
   return (
     <QueryClientProvider client={queryClient}>

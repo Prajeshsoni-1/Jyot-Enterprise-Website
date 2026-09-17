@@ -3,7 +3,12 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-export type NotificationType = "booking" | "job_application" | "enquiry" | "request";
+export type NotificationType =
+  | "booking"
+  | "job_application"
+  | "enquiry"
+  | "new_enquiry"
+  | "request";
 export type NotificationEntityType = "booking" | "job_application" | "lead";
 
 export interface AdminNotification {
@@ -50,6 +55,8 @@ const fallbackNotifications: AdminNotification[] = [];
 
 /**
  * Triggers an admin notification across all authorized team members.
+ * Uses a single broadcast record (recipient_user_id = null) when no specific recipient is targeted,
+ * allowing all admins, managers, and owners to receive Realtime events without row multiplication.
  * Includes 5-minute duplicate prevention and safe try/catch wrapper.
  */
 export async function triggerAdminNotification(input: TriggerNotificationInput): Promise<void> {
@@ -59,30 +66,8 @@ export async function triggerAdminNotification(input: TriggerNotificationInput):
     const nowIso = new Date().toISOString();
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-    // 1. Resolve recipients from user_roles (all admins and managers)
-    let recipientIds: string[] = [];
-    if (input.recipientUserId) {
-      recipientIds = [input.recipientUserId];
-    } else {
-      try {
-        const { data: teamRoles } = await supabaseAdmin
-          .from("user_roles")
-          .select("user_id, role")
-          .in("role", ["admin", "manager", "staff"]);
-        if (teamRoles && teamRoles.length > 0) {
-          recipientIds = Array.from(
-            new Set(teamRoles.map((r: { user_id: string }) => r.user_id).filter(Boolean)),
-          );
-        }
-      } catch (roleErr) {
-        console.warn("[triggerAdminNotification] Could not load team roles:", roleErr);
-      }
-    }
-
-    // Default to at least one broadcast row if no explicit recipient IDs found
-    if (recipientIds.length === 0) {
-      recipientIds = [null as unknown as string];
-    }
+    // 1. Resolve recipients: if targeted to specific user, use that ID; otherwise use [null] for broadcast
+    const recipientIds: (string | null)[] = input.recipientUserId ? [input.recipientUserId] : [null];
 
     for (const recipientId of recipientIds) {
       // 2. Duplicate prevention check (entity_type + entity_id or reference within 5 minutes)
@@ -97,7 +82,12 @@ export async function triggerAdminNotification(input: TriggerNotificationInput):
           .gte("created_at", fiveMinutesAgo)
           .limit(1);
 
-        if (recipientId) dupQuery = dupQuery.eq("recipient_user_id", recipientId);
+        if (recipientId) {
+          dupQuery = dupQuery.eq("recipient_user_id", recipientId);
+        } else {
+          dupQuery = dupQuery.is("recipient_user_id", null);
+        }
+
         if (entityId) dupQuery = dupQuery.eq("entity_id", entityId);
         else if (entityRef) dupQuery = dupQuery.eq("entity_reference", entityRef);
 
@@ -182,7 +172,7 @@ export const getAdminNotifications = createServerFn({ method: "POST" })
     z
       .object({
         filter: z
-          .enum(["all", "unread", "booking", "job_application", "enquiry", "request"])
+          .enum(["all", "unread", "booking", "job_application", "enquiry", "new_enquiry", "request"])
           .default("all"),
         search: z.string().max(200).optional(),
         page: z.number().int().min(1).default(1),
@@ -217,6 +207,8 @@ export const getAdminNotifications = createServerFn({ method: "POST" })
 
       if (data.filter === "unread") {
         query = query.eq("is_read", false);
+      } else if (data.filter === "enquiry" || data.filter === "new_enquiry") {
+        query = query.in("type", ["enquiry", "new_enquiry"]);
       } else if (data.filter !== "all") {
         query = query.eq("type", data.filter);
       }
@@ -248,6 +240,8 @@ export const getAdminNotifications = createServerFn({ method: "POST" })
     let filtered = userRows;
     if (data.filter === "unread") {
       filtered = filtered.filter((n) => !n.is_read);
+    } else if (data.filter === "enquiry" || data.filter === "new_enquiry") {
+      filtered = filtered.filter((n) => n.type === "enquiry" || n.type === "new_enquiry");
     } else if (data.filter !== "all") {
       filtered = filtered.filter((n) => n.type === data.filter);
     }

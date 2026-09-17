@@ -18,8 +18,15 @@ type Ctx = { supabase: any; userId: string; claims?: Record<string, unknown> };
 const SETTINGS_KEY = "site";
 
 function publicClient() {
-  const url = process.env["SUPABASE_URL"]!;
-  const key = process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"]!;
+  const url =
+    process.env["SUPABASE_URL"] ||
+    process.env["VITE_SUPABASE_URL"] ||
+    "https://xmveofqeunsqzyxhakyj.supabase.co";
+  const key =
+    process.env["SUPABASE_PUBLISHABLE_KEY"] ??
+    process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ??
+    process.env["SUPABASE_ANON_KEY"] ??
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtdmVvZnFldW5zcXp5eGhha3lqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NjI4MjMsImV4cCI6MjEwNDQzODgyM30.krXHwtaUwy45nyH86I6Tl8pz7dEhQIdcIlVO027-BnI";
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: {

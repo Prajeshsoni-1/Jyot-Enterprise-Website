@@ -450,22 +450,6 @@ function BlogPostPage() {
                   <div className="mt-4 grid gap-2 text-sm font-semibold">
                     <a
                       className="text-muted-foreground transition-colors hover:text-primary"
-                      href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(path)}`}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                    >
-                      LinkedIn
-                    </a>
-                    <a
-                      className="text-muted-foreground transition-colors hover:text-primary"
-                      href={`https://twitter.com/intent/tweet?text=${shareText}`}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                    >
-                      X / Twitter
-                    </a>
-                    <a
-                      className="text-muted-foreground transition-colors hover:text-primary"
                       href={`https://wa.me/?text=${shareText}`}
                       target="_blank"
                       rel="noreferrer noopener"
