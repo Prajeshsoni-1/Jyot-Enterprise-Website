@@ -4,6 +4,7 @@
  * database is unreachable, so the public site can never go blank.
  */
 
+import { supabase } from "@/integrations/supabase/client";
 import {
   getBlogPost,
   getCareerRole,
@@ -43,10 +44,27 @@ import { PRODUCTS, TESTIMONIALS } from "@/data/site";
 
 async function rows(module: CmsModule): Promise<CmsRow[]> {
   try {
-    return await getPublishedContent({ data: { module } });
+    const res = await getPublishedContent({ data: { module } });
+    if (Array.isArray(res) && res.length > 0) return res;
+    if (res && Array.isArray((res as any).rows) && (res as any).rows.length > 0) return (res as any).rows;
   } catch {
-    return [];
+    // ignore
   }
+
+  try {
+    const { data, error } = await supabase
+      .from("cms_content")
+      .select("*")
+      .eq("module", module)
+      .eq("status", "published");
+    if (!error && Array.isArray(data)) {
+      return data as unknown as CmsRow[];
+    }
+  } catch {
+    // ignore
+  }
+
+  return [];
 }
 
 export async function loadBlogPosts() {
@@ -216,8 +234,13 @@ export async function loadServiceOverrides() {
   }
 }
 
-export async function loadCmsFaqs() {
-  return rows("faqs");
+export async function loadCmsFaqs(): Promise<CmsRow[]> {
+  try {
+    const r = await rows("faqs");
+    return Array.isArray(r) ? r : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function loadJobs() {

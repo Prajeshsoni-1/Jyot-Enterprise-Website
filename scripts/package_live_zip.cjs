@@ -15,6 +15,13 @@ if (fs.existsSync(zipFile)) {
   fs.unlinkSync(zipFile);
 }
 
+const sourceHtaccess = path.join(rootDir, 'public', '.htaccess');
+const destHtaccess = path.join(publicDir, '.htaccess');
+if (fs.existsSync(sourceHtaccess)) {
+  fs.copyFileSync(sourceHtaccess, destHtaccess);
+  console.log('[package] Synced .htaccess into .output/public');
+}
+
 console.log('[package] Creating jyotenterprise-live-build.zip with POSIX forward slashes...');
 
 // Using Windows native tar.exe with POSIX paths

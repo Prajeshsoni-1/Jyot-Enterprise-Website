@@ -172,8 +172,9 @@ export function toBlogPost(row: CmsRow): BlogPost {
   };
 }
 
-export function mergeBlogPosts(rows: CmsRow[]): BlogPost[] {
-  const merged = mergeBySlug(BLOG_POSTS, rows.filter((r) => r.slug).map(toBlogPost));
+export function mergeBlogPosts(rows: CmsRow[] | null | undefined): BlogPost[] {
+  const safe = Array.isArray(rows) ? rows : [];
+  const merged = mergeBySlug(BLOG_POSTS, safe.filter((r) => r && r.slug).map(toBlogPost));
   return merged.sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
@@ -316,8 +317,9 @@ export function toProject(row: CmsRow): Project {
   };
 }
 
-export function mergeProjects(rows: CmsRow[]): Project[] {
-  return mergeBySlug(PROJECTS, rows.filter((r) => r.slug).map(toProject));
+export function mergeProjects(rows: CmsRow[] | null | undefined): Project[] {
+  const safe = Array.isArray(rows) ? rows : [];
+  return mergeBySlug(PROJECTS, safe.filter((r) => r && r.slug).map(toProject));
 }
 
 /* ----------------------------------------------------------- case studies */
@@ -343,8 +345,9 @@ function toCaseStudy(row: CmsRow): CaseStudy {
   };
 }
 
-export function mergeCaseStudies(rows: CmsRow[]): CaseStudy[] {
-  return mergeBySlug(CASE_DETAILS, rows.filter((r) => r.slug).map(toCaseStudy));
+export function mergeCaseStudies(rows: CmsRow[] | null | undefined): CaseStudy[] {
+  const safe = Array.isArray(rows) ? rows : [];
+  return mergeBySlug(CASE_DETAILS, safe.filter((r) => r && r.slug).map(toCaseStudy));
 }
 
 /* ------------------------------------------------------------ industries */
@@ -373,8 +376,9 @@ function toIndustry(row: CmsRow): IndustryPage {
   };
 }
 
-export function mergeIndustries(rows: CmsRow[]): IndustryPage[] {
-  return mergeBySlug(INDUSTRY_PAGES, rows.filter((r) => r.slug).map(toIndustry));
+export function mergeIndustries(rows: CmsRow[] | null | undefined): IndustryPage[] {
+  const safe = Array.isArray(rows) ? rows : [];
+  return mergeBySlug(INDUSTRY_PAGES, safe.filter((r) => r && r.slug).map(toIndustry));
 }
 
 /* ------------------------------------------------------------- resources */
@@ -556,8 +560,9 @@ function formatFileSize(bytes: number): string {
   return `${bytes} B`;
 }
 
-export function mergeResources(rows: CmsRow[]): ResourceItem[] {
-  return mergeBySlug(RESOURCE_LIBRARY, rows.filter((r) => r.slug).map(toResource));
+export function mergeResources(rows: CmsRow[] | null | undefined): ResourceItem[] {
+  const safe = Array.isArray(rows) ? rows : [];
+  return mergeBySlug(RESOURCE_LIBRARY, safe.filter((r) => r && r.slug).map(toResource));
 }
 
 /** Full detailed resource mapper ensuring all rich CMS attributes are present. */
@@ -586,8 +591,9 @@ function toSubService(row: CmsRow): SubService {
   };
 }
 
-export function mergeSubServices(rows: CmsRow[]): SubService[] {
-  return mergeBySlug(SUB_SERVICES, rows.filter((r) => r.slug).map(toSubService));
+export function mergeSubServices(rows: CmsRow[] | null | undefined): SubService[] {
+  const safe = Array.isArray(rows) ? rows : [];
+  return mergeBySlug(SUB_SERVICES, safe.filter((r) => r && r.slug).map(toSubService));
 }
 
 /* -------------------------------------------------------------- services */
@@ -605,9 +611,11 @@ export type ServiceOverrides = Record<
 >;
 
 /** Services keep their built-in icon and route key; CMS supplies the copy. */
-export function serviceOverrides(rows: CmsRow[]): ServiceOverrides {
+export function serviceOverrides(rows: CmsRow[] | null | undefined): ServiceOverrides {
+  const safe = Array.isArray(rows) ? rows : [];
   const out: ServiceOverrides = {};
-  for (const row of rows) {
+  for (const row of safe) {
+    if (!row) continue;
     const key = row.service_key || row.slug;
     if (!key) continue;
     const features = toLines(j(row, "features")).map((line) => splitPair(line).a);
@@ -627,9 +635,10 @@ export function serviceOverrides(rows: CmsRow[]): ServiceOverrides {
 
 export type CmsFaq = { q: string; a: string; category: string };
 
-export function cmsFaqs(rows: CmsRow[]): CmsFaq[] {
-  return rows
-    .filter((r) => r.question && r.answer)
+export function cmsFaqs(rows: CmsRow[] | null | undefined): CmsFaq[] {
+  const safe = Array.isArray(rows) ? rows : [];
+  return safe
+    .filter((r) => r && r.question && r.answer)
     .map((r) => ({ q: r.question!, a: r.answer!, category: s(r.category, "General") }));
 }
 
@@ -644,8 +653,9 @@ export function cmsSeo(row: CmsRow | undefined, fallback: { title: string; descr
   };
 }
 
-export function bySlug(rows: CmsRow[]): Map<string, CmsRow> {
-  return new Map(rows.filter((r) => r.slug).map((r) => [r.slug as string, r]));
+export function bySlug(rows: CmsRow[] | null | undefined): Map<string, CmsRow> {
+  const safe = Array.isArray(rows) ? rows : [];
+  return new Map(safe.filter((r) => r && r.slug).map((r) => [r.slug as string, r]));
 }
 
 /* ------------------------------------------------------------------ jobs */
@@ -845,8 +855,9 @@ export function jobExtras(row: CmsRow | undefined): JobExtras | null {
   };
 }
 
-export function mergeJobs(rows: CmsRow[]): Job[] {
-  const cms = rows.filter((r) => r.slug).map(toJob);
+export function mergeJobs(rows: CmsRow[] | null | undefined): Job[] {
+  const safe = Array.isArray(rows) ? rows : [];
+  const cms = safe.filter((r) => r && r.slug).map(toJob);
   const merged = mergeBySlug(JOBS, cms);
   return merged.sort((a, b) => {
     if (Boolean(a.featured) !== Boolean(b.featured)) {
@@ -874,9 +885,10 @@ export type CmsDownload = {
   fileSize?: number | undefined;
 };
 
-export function cmsDownloads(rows: CmsRow[]): CmsDownload[] {
-  return rows
-    .filter((r) => r.slug)
+export function cmsDownloads(rows: CmsRow[] | null | undefined): CmsDownload[] {
+  const safe = Array.isArray(rows) ? rows : [];
+  return safe
+    .filter((r) => r && r.slug)
     .map((r) => ({
       slug: r.slug!,
       title: s(r.title),
@@ -908,14 +920,14 @@ export type ProductItem = {
   category?: string | undefined;
 };
 
-export function mergeProducts(rows: CmsRow[]): ProductItem[] {
+export function mergeProducts(rows: CmsRow[] | null | undefined): ProductItem[] {
   const defaultProducts: ProductItem[] = PRODUCTS.map((p) => ({
     ...p,
     ctaLabel: "Request a demo",
     ctaHref: "/contact",
     category: "Enterprise Software",
   }));
-  if (!rows || rows.length === 0) return defaultProducts;
+  if (!Array.isArray(rows) || rows.length === 0) return defaultProducts;
   return rows.map((r) => ({
     name: s(r.title, "Product"),
     slug: r.slug || undefined,
@@ -938,8 +950,8 @@ export type TestimonialItem = {
   thumbnail?: string | undefined;
 };
 
-export function mergeTestimonials(rows: CmsRow[]): TestimonialItem[] {
-  if (!rows || rows.length === 0) return TESTIMONIALS;
+export function mergeTestimonials(rows: CmsRow[] | null | undefined): TestimonialItem[] {
+  if (!Array.isArray(rows) || rows.length === 0) return TESTIMONIALS;
   return rows.map((r) => ({
     quote: s(r.body, ""),
     name: s(r.author) || s(r.title, "Client"),
@@ -962,8 +974,8 @@ export type TeamMemberItem = {
   linkedin?: string | undefined;
 };
 
-export function mergeTeamMembers(rows: CmsRow[]): TeamMemberItem[] {
-  if (!rows || rows.length === 0) return [];
+export function mergeTeamMembers(rows: CmsRow[] | null | undefined): TeamMemberItem[] {
+  if (!Array.isArray(rows) || rows.length === 0) return [];
   return rows.map((r) => ({
     name: s(r.title, "Team Member"),
     role: s(r.summary, "Lead"),

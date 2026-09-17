@@ -28,6 +28,7 @@ import { getSiteSettings } from "../lib/settings.functions";
 import {
   DEFAULT_SITE_SETTINGS,
   SiteSettingsContext,
+  mergeSettings,
   type SiteSettings,
 } from "../lib/site-settings";
 
@@ -99,7 +100,8 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   loader: async () => {
     try {
-      return { settings: await getSiteSettings() };
+      const res = await getSiteSettings();
+      return { settings: mergeSettings(res) };
     } catch {
       return { settings: DEFAULT_SITE_SETTINGS };
     }

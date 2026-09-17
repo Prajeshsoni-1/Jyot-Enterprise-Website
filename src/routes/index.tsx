@@ -33,7 +33,8 @@ import { WhyStay } from "@/components/site/sections/WhyStay";
 import { FaqGroups } from "@/components/site/sections/FaqGroups";
 import { Resources } from "@/components/site/sections/Resources";
 import { FinalCta } from "@/components/site/sections/FinalCta";
-import { SERVICES, SOLUTIONS, TESTIMONIALS, POSTS, CONTACT } from "@/data/site";
+import { SERVICES, SOLUTIONS, TESTIMONIALS, PRODUCTS, POSTS, CONTACT } from "@/data/site";
+import { BLOG_POSTS } from "@/data/blog";
 import { FAQ_GROUPS, OFFICES } from "@/data/site";
 import { canonical, faqSchema, jsonLd, pageMeta } from "@/lib/seo";
 import {
@@ -47,24 +48,39 @@ import { cmsFaqs, type ProductItem, type TestimonialItem } from "@/lib/cms-conte
 
 export const Route = createFileRoute("/")({
   loader: async () => {
-    const [faqRows, page, products, testimonials, posts] = await Promise.all([
-      loadCmsFaqs(),
-      loadPage("home"),
-      loadProducts(),
-      loadTestimonials(),
-      loadBlogPosts(),
-    ]);
-    return {
-      faqs: cmsFaqs(faqRows),
-      products,
-      testimonials,
-      posts,
-      hero: {
-        title: page.text("hero_title", ""),
-        body: page.text("hero_description", ""),
-        ctaLabel: page.text("cta_label", ""),
-      },
-    };
+    try {
+      const [faqRows, page, products, testimonials, posts] = await Promise.all([
+        loadCmsFaqs().catch(() => []),
+        loadPage("home").catch(() => null),
+        loadProducts().catch(() => PRODUCTS),
+        loadTestimonials().catch(() => TESTIMONIALS),
+        loadBlogPosts().catch(() => BLOG_POSTS),
+      ]);
+      return {
+        faqs: cmsFaqs(faqRows),
+        products: Array.isArray(products) ? products : PRODUCTS,
+        testimonials: Array.isArray(testimonials) ? testimonials : TESTIMONIALS,
+        posts: Array.isArray(posts) ? posts : BLOG_POSTS,
+        hero: {
+          title: page?.text ? page.text("hero_title", "") : "",
+          body: page?.text ? page.text("hero_description", "") : "",
+          ctaLabel: page?.text ? page.text("cta_label", "") : "",
+        },
+      };
+    } catch (err) {
+      console.warn("[index.loader] Fallback to static defaults:", err);
+      return {
+        faqs: [],
+        products: PRODUCTS,
+        testimonials: TESTIMONIALS,
+        posts: BLOG_POSTS,
+        hero: {
+          title: "",
+          body: "",
+          ctaLabel: "",
+        },
+      };
+    }
   },
   head: () => ({
     meta: pageMeta({

@@ -5,21 +5,45 @@
   # 1. Redirect /api/downloads/ to static /downloads/
   RewriteRule ^api/downloads/(.+)$ /downloads/$1 [R=301,L]
 
-  # 2. Serve existing files or directories directly
+  # 2. Return clean 404 for missing static assets (never serve index.html as a fake CSS/JS file)
+  RewriteCond %{REQUEST_URI} ^/assets/ [OR]
+  RewriteCond %{REQUEST_URI} \.(css|js|mjs|json|png|jpg|jpeg|svg|webp|woff|woff2|ttf|ico|pdf)$ [NC]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ - [R=404,L]
+
+  # 3. Serve existing files or directories directly
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # 3. Rewrite all other SPA paths to index.html
+  # 4. Rewrite all other client-side SPA routes to index.html
   RewriteRule ^ index.html [L]
 </IfModule>
 
-# Ensure correct MIME type and headers for PDFs
+# Explicit MIME types for all modern web assets
 <IfModule mod_mime.c>
+  AddType text/css .css
+  AddType application/javascript .js .mjs
+  AddType application/json .json
+  AddType image/svg+xml .svg
   AddType application/pdf .pdf
+  AddType font/woff2 .woff2
+  AddType font/woff .woff
+  AddType font/ttf .ttf
+  AddType image/webp .webp
+  AddType image/png .png
+  AddType image/jpeg .jpg .jpeg
 </IfModule>
 
+# Caching & security headers
 <IfModule mod_headers.c>
+  <FilesMatch "\.(css|js|mjs|woff2|woff|ttf)$">
+    Header set X-Content-Type-Options "nosniff"
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "\.(html)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
   <FilesMatch "\.(pdf)$">
     Header set Content-Type "application/pdf"
     Header set X-Content-Type-Options "nosniff"
